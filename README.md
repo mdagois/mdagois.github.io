@@ -1,6 +1,6 @@
-# mdagois
+# Maximilien Dagois' website
 
-Perosnal website of Maximilien Dagois.
+Personal website of Maximilien Dagois.
 
 ## Icons
 
