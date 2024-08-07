@@ -4,10 +4,11 @@ Perosnal website of Maximilien Dagois.
 
 ## Icons
 
-Icons from [FLATICON](https://www.flaticon.com/).
+Icons come from [FLATICON](https://www.flaticon.com/).
 
-The [article.png](images/article.png) icon is by [Muhammad Ali](https://www.flaticon.com/authors/muhammad-ali).
-The [book.png](images/book.png) icon is by [Karyative](https://www.flaticon.com/authors/karyative).
-The [contact.png](images/contact.png) icon is by [Eucalyp](https://www.flaticon.com/authors/eucalyp).
-The [games.png](images/games.png) icon is by [Talha Dogar](https://www.flaticon.com/authors/talha-dogar).
+| Author | Icons |
+| [Eucalyp](https://www.flaticon.com/authors/eucalyp) | [contact.png](images/contact.png) [template.png](images/template.png) |
+| [Karyative](https://www.flaticon.com/authors/karyative) | [book.png](images/book.png) |
+| [Muhammad Ali](https://www.flaticon.com/authors/muhammad-ali) | [article.png](images/article.png) |
+| [Talha Dogar](https://www.flaticon.com/authors/talha-dogar) | [games.png](images/games.png) |
 
