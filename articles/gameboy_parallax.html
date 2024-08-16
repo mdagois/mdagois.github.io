@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Coding Adventure</title>
+    <link rel="stylesheet" href="../bootstrap.min.css">
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+      <div class="container-fluid">
+      <div class="navbar-brand">Coding Adventures</div>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarColor01">
+        <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="../index.html">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="../portfolio.html">Portfolio</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="../about.html">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="../contact.html">Contact</a>
+        </li>
+        </ul>
+      </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <br/>
+      <p>
+        <img src="../images/gameboy.png" alt="gameboy" class="rounded mx-auto d-block">
+      </p>
+
+      <!--
+        Content
+          Introduction
+            What is parallax scrolling
+            Explains the two techniques
+            Point to the book for the first technique
+            Learn everything there is to know about Game Boy programming with the book
+            Note on ghosting
+                Rule of thumb to design tiles that scroll well (refer to games)
+          Using interrupts
+            hblank
+            line compare
+            Naive implementation
+            Optimized implementation
+            Using sprites for overlap
+            Using one single halt or several halts
+            Benefit: supported in hardware (light weight)
+            Drawback: layers cannot overlap unless using sprites, but hit sprite limits
+          Using tiles
+            Explanation
+            Benefit: layers can overlap, can work vertically, works for top down views (zelda-like or shmups)
+            Drawback: uses more rom space, more work in the vblank, must respect tile boundaries
+            CGB: can use DMA
+          Conclusion
+            Mix both techniques
+            Faster data transfers on the DMG using pop slide
+            No need for interrupt in an intro screen
+            Read the book
+            Rift effect for shmups
+          Art attribution
+      -->
+
+      <h4>Parallax Scrolling on the Game Boy</h4>
+        <p>
+          This article is an overview of two techniques you can use to add parallax scrolling to your Game Boy games.
+          We'll use assembly for the code snippet, but the theory presented here should also be relevant to games programmed in C.
+          The technical details might even work on other consoles, such as the NES or the Master System.
+        </p>
+        <div class="mx-auto">
+        <video autoplay loop muted preload="auto" class="mx-auto d-block">
+          <source src="../video/parallax_moon.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        </div>
+        <p>
+        <!--If you want to know everything there is to know about Game Boy programming, please check out my book on the subject, <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.-->
+        </p>
+      <h5>The interrut method</h5>
+      <h5>The tile method</h5>
+      <h5>Conclusion</h5>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  </body>
+</html>
+
