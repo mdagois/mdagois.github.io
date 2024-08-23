@@ -41,7 +41,7 @@
       <!--
         Content
           Introduction
-            What is parallax scrolling
+            Requirements (target audience)
             Explains the two techniques
             Point to the book for the first technique
             Learn everything there is to know about Game Boy programming with the book
@@ -72,15 +72,41 @@
 
       <h4>Parallax Scrolling on the Game Boy</h4>
         <p>
-          This article is an overview of two techniques you can use to add parallax scrolling to your Game Boy games.
+          This article is an in-depth guide about implementing parallax scrolling on the Game Boy.
+          xxx
+          We'll learn about two techniques that you can use to add parallax scrolling to your Game Boy games.
+          Both techniques have benefits and drawbacks.
+        </p>
+        <p>
+          Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
+          Graphics elements that are meant to be further away from the observer move more slowly than elements that are supposed to be nearer.
+          The effect is illustrated in Figure 1.
+        </p>
+
+        <div class="mx-auto">
+          <figure>
+            <img src="../images/parallax_scrolling.gif" alt="Parallax scrolling">
+            <figcaption>Figure 1: Parallax scrolling</figcaption>
+          </figure>
+        </div>
+
+        <p>
+          works on Game Boy color.
+          Both implementations have benefits and drawbacks.
+          techniques you can use to add parallax scrolling to your Game Boy games.
           We'll use assembly for the code snippet, but the theory presented here should also be relevant to games programmed in C.
           The technical details might even work on other consoles, such as the NES or the Master System.
         </p>
+
         <div class="mx-auto">
-        <video autoplay loop muted preload="auto" class="mx-auto d-block">
-          <source src="../video/parallax_moon.mp4" type="video/mp4">
-          Your browser does not support the video tag.
-        </video>
+          <video autoplay loop muted preload="auto">
+            <source src="../video/parallax_hblank.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <video autoplay loop muted preload="auto">
+            <source src="../video/parallax_tile.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
         </div>
         <p>
         <!--If you want to know everything there is to know about Game Boy programming, please check out my book on the subject, <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.-->
