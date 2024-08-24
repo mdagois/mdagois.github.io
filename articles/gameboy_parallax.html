@@ -41,10 +41,9 @@
       <!--
         Content
           Introduction
-            Requirements (target audience)
             Explains the two techniques
             Point to the book for the first technique
-            Learn everything there is to know about Game Boy programming with the book
+            Works in Game Boy Color
             Note on ghosting
                 Rule of thumb to design tiles that scroll well (refer to games)
           Using interrupts
@@ -73,30 +72,45 @@
       <h4>Parallax Scrolling on the Game Boy</h4>
         <p>
           This article is an in-depth guide about implementing parallax scrolling on the Game Boy.
-          xxx
-          We'll learn about two techniques that you can use to add parallax scrolling to your Game Boy games.
-          Both techniques have benefits and drawbacks.
+          It presents two techniques that you can use to add parallax scrolling to your Game Boy games.
         </p>
         <p>
-          Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
-          Graphics elements that are meant to be further away from the observer move more slowly than elements that are supposed to be nearer.
-          The effect is illustrated in Figure 1.
+          We'll start by reviewing what parallax scrolling is, and what the challenges are to implement it on the Game Boy.
         </p>
-
-        <div class="mx-auto">
-          <figure>
-            <img src="../images/parallax_scrolling.gif" alt="Parallax scrolling">
-            <figcaption>Figure 1: Parallax scrolling</figcaption>
-          </figure>
-        </div>
-
         <p>
-          works on Game Boy color.
-          Both implementations have benefits and drawbacks.
-          techniques you can use to add parallax scrolling to your Game Boy games.
-          We'll use assembly for the code snippet, but the theory presented here should also be relevant to games programmed in C.
-          The technical details might even work on other consoles, such as the NES or the Master System.
+          Then, we'll go over the two parallax techniques: the <i>hblank</i> method and the <i>tile</i> method.
+          We'll show how to implement those techniques and explain their benefits and drawbacks.
+          We'll use assembly code samples to show all the implementation details.
+          However, the concepts presented in this article should also be relevant to games programmed in C,
+          and the techniques might be applicable to other consoles as well, such as the NES or Master System.
         </p>
+        <p>
+          By the end of the article, you'll have a strong grasp of what it takes to implement parallax scrolling on the Game Boy.
+          You'll also be able to choose the best parallax techniques for your game.
+        </p>
+
+        <h5>Target audience</h5>
+          <p>
+            Anyone can grasp the concepts presented in this article.
+            However, you should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
+            To get a strong introduction to Game Boy programming in assembly, I recommend you to check my book,
+            <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.
+            It is a complete coverage of all the aspects the Game Boy, using a beginner-friendly approach for those new to assembly.
+          </p>
+
+        <h5>What is parallax scrolling</h5>
+          <p>
+            Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
+            The effect of parallax scrolling is shown in Figure 1.
+            <figure>
+              <img src="../images/parallax_scrolling.gif" alt="Parallax scrolling">
+              <figcaption>Figure 1: Parallax scrolling</figcaption>
+            </figure>
+            Graphics elements are placed on distinct layers that moves at different paces.
+            The further way a layer is meant to be from the observer, the slower it moves.
+          </p>
+          <p>
+          </p>
 
         <div class="mx-auto">
           <video autoplay loop muted preload="auto">
