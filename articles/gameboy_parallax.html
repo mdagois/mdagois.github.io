@@ -66,6 +66,7 @@
             No need for interrupt in an intro screen
             Read the book
             Rift effect for shmups
+            More techniques: window, sprites
           Art attribution
       -->
 
@@ -110,13 +111,18 @@
             The further way a layer is meant to be from the observer, the slower it moves.
           </p>
           <p>
+            What makes parallax scrolling challenging on the Game Boy is that the console only supports one single background layer.
+            So, we have to leverage the hardware capabilities to emulate having several background layers.
           </p>
 
+      <h5>The hblank method</h5>
         <div class="mx-auto">
           <video autoplay loop muted preload="auto">
             <source src="../video/parallax_hblank.mp4" type="video/mp4">
             Your browser does not support the video tag.
           </video>
+
+      <h5>The tile method</h5>
           <video autoplay loop muted preload="auto">
             <source src="../video/parallax_tile.mp4" type="video/mp4">
             Your browser does not support the video tag.
@@ -125,8 +131,7 @@
         <p>
         <!--If you want to know everything there is to know about Game Boy programming, please check out my book on the subject, <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.-->
         </p>
-      <h5>The interrut method</h5>
-      <h5>The tile method</h5>
+
       <h5>Conclusion</h5>
     </div>
 
