@@ -38,41 +38,9 @@
         <img src="../images/gameboy.png" alt="gameboy" class="rounded mx-auto d-block">
       </p>
 
-      <!--
-        Content
-          Introduction
-            Explains the two techniques
-            Point to the book for the first technique
-            Works in Game Boy Color
-            Note on ghosting
-                Rule of thumb to design tiles that scroll well (refer to games)
-          Using interrupts
-            hblank
-            line compare
-            Naive implementation
-            Optimized implementation
-            Using sprites for overlap
-            Using one single halt or several halts
-            Benefit: supported in hardware (light weight)
-            Drawback: layers cannot overlap unless using sprites, but hit sprite limits + only 2 colors (bg sees through)
-          Using tiles
-            Explanation
-            Benefit: layers can overlap, can work vertically, works for top down views (zelda-like or shmups)
-            Drawback: uses more rom space, more work in the vblank, must respect tile boundaries
-            CGB: can use DMA
-          Conclusion
-            Mix both techniques
-            Faster data transfers on the DMG using pop slide
-            No need for interrupt in an intro screen
-            Read the book
-            Rift effect for shmups
-            More techniques: window, sprites
-          Art attribution
-      -->
-
       <h4>Parallax Scrolling on the Game Boy</h4>
         <p>
-          This article is an in-depth guide about implementing parallax scrolling on the Game Boy.
+          This article is an in-depth guide to implementing parallax scrolling on the Game Boy.
           It presents two techniques that you can use to add parallax scrolling to your Game Boy games.
         </p>
         <p>
@@ -92,7 +60,7 @@
 
         <h5>Target audience</h5>
           <p>
-            Anyone can grasp the concepts presented in this article.
+            Anyone interested in game development can grasp the concepts presented in this article.
             However, you should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
             To get a strong introduction to Game Boy programming in assembly, I recommend you to check my book,
             <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.
@@ -104,35 +72,83 @@
             Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
             The effect of parallax scrolling is shown in Figure 1.
             <figure>
-              <img src="../images/parallax_scrolling.gif" alt="Parallax scrolling">
+              <img src="../images/parallax/parallax_scrolling.gif" alt="Parallax scrolling">
               <figcaption>Figure 1: Parallax scrolling</figcaption>
             </figure>
             Graphics elements are placed on distinct layers that moves at different paces.
-            The further way a layer is meant to be from the observer, the slower it moves.
+            The further away a layer is meant to be from the observer, the slower it moves.
           </p>
           <p>
             What makes parallax scrolling challenging on the Game Boy is that the console only supports one single background layer.
-            So, we have to leverage the hardware capabilities to emulate having several background layers.
+            So, we have to leverage the hardware capabilities to mimic the effect of having several background layers.
           </p>
 
       <h5>The hblank method</h5>
-        <div class="mx-auto">
-          <video autoplay loop muted preload="auto">
-            <source src="../video/parallax_hblank.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
+        <p>
+          The first technique we'll study is the hblank method.
+          Figure 2 is a video of the hblank sample.
+        </p>
+        <figure>
+            <video autoplay loop muted preload="auto">
+              <source src="../video/parallax/hblank.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <figcaption>Figure 2: Parallax scrolling using the hblank method</figcaption>
+        </figure>
+        <p>
+          The screen is split horizontally into three different layers that moves at different paces.
+          The top layer contains the planets and stars.
+          The middle layer contains the rocks.
+          The bottom layer contains the ground on which the astronauts walks.
+        </p>
+
+        <figure>
+          <img src="../images/parallax/layers.png" alt="Parallax layers">
+          <figcaption>Figure 3: Parallax layers</figcaption>
+        </figure>
 
       <h5>The tile method</h5>
           <video autoplay loop muted preload="auto">
-            <source src="../video/parallax_tile.mp4" type="video/mp4">
+            <source src="../video/parallax/tile.mp4" type="video/mp4">
             Your browser does not support the video tag.
           </video>
-        </div>
         <p>
-        <!--If you want to know everything there is to know about Game Boy programming, please check out my book on the subject, <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.-->
         </p>
 
       <h5>Conclusion</h5>
+        <!--If you want to know everything there is to know about Game Boy programming, please check out my book on the subject, <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.-->
+
+      <!--
+        Content
+          Introduction
+            Works in Game Boy Color
+            Note on ghosting
+                Rule of thumb to design tiles that scroll well (refer to games)
+          Using interrupts
+            hblank
+            line compare
+            Naive implementation
+            Optimized implementation
+            Using sprites for overlap
+            Using one single halt or several halts
+            rSCX latched at the start of the line
+            Benefit: supported in hardware (light weight)
+            Drawback: layers cannot overlap unless using sprites, but hit sprite limits + only 2 colors (bg sees through)
+          Using tiles
+            Explanation
+            Benefit: layers can overlap, can work vertically, works for top down views (zelda-like or shmups)
+            Drawback: uses more rom space, more work in the vblank, must respect tile boundaries
+            CGB: can use DMA
+          Conclusion
+            Mix both techniques
+            Faster data transfers on the DMG using pop slide
+            No need for interrupt in an intro screen
+            Read the book
+            Rift effect for shmups
+            More techniques: window, sprites
+          Art attribution
+      -->
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
