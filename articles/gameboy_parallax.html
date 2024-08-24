@@ -87,31 +87,44 @@
         <p>
           The first technique we'll study is the hblank method.
           Figure 2 is a video of the hblank sample.
+          It consists of an astronauts walking on a planet.
         </p>
         <figure>
-            <video autoplay loop muted preload="auto">
-              <source src="../video/parallax/hblank.mp4" type="video/mp4">
-              Your browser does not support the video tag.
-            </video>
-            <figcaption>Figure 2: Parallax scrolling using the hblank method</figcaption>
+          <video autoplay loop muted preload="auto">
+            <source src="../video/parallax/hblank.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <figcaption>Figure 2: Parallax scrolling using the hblank method</figcaption>
         </figure>
         <p>
-          The screen is split horizontally into three different layers that moves at different paces.
+          The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
+          To achieve this parallax effect, the idea is to split the screen horizontally into three different layers.
           The top layer contains the planets and stars.
           The middle layer contains the rocks.
           The bottom layer contains the ground on which the astronauts walks.
+          The layers are shown in Figure 3, with red lines separating them.
         </p>
-
         <figure>
           <img src="../images/parallax/layers.png" alt="Parallax layers">
           <figcaption>Figure 3: Parallax layers</figcaption>
         </figure>
+        <p>
+          The sky layer extends from lines 0 to 87.
+          The rock spans lines 88 to 111.
+          The ground covers the remaining lines, from 112 to 143.
+          Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
+        </p>
+        <p>
+          Only one scrolling value -> need to change it for each layer.
+        </p>
 
       <h5>The tile method</h5>
+        <figure>
           <video autoplay loop muted preload="auto">
             <source src="../video/parallax/tile.mp4" type="video/mp4">
             Your browser does not support the video tag.
           </video>
+          <figcaption>Figure XXX: Parallax scrolling using the tile method</figcaption>
         <p>
         </p>
 
@@ -132,6 +145,7 @@
             Using sprites for overlap
             Using one single halt or several halts
             rSCX latched at the start of the line
+            Split from 2 to n layers
             Benefit: supported in hardware (light weight)
             Drawback: layers cannot overlap unless using sprites, but hit sprite limits + only 2 colors (bg sees through)
           Using tiles
