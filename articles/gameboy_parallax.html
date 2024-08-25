@@ -85,14 +85,15 @@
 
       <h5>The hblank method</h5>
         <p>
-          The first technique we'll study is the hblank method.
-          In my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, I go over two hblank parallax version.
-          One <i>naive</i> implementation, and one <i>optimized</i> implementation.
+          The first technique we'll study is the <i>hblank</i> method.
+          In my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, I go over two versions of hblank parallax:
+          one <i>naive</i> implementation that consumes a lot of cycles, and one <i>optimized</i> implementation.
           In this article, we'll use a modified version of the optimized implementation.
-          It has the benefit of avoiding the <i>rSTAT bug</i>, which is a nasty hardware issue that occurs on the original Game Boy.
+          It has the benefit of avoiding the <tt>rSTAT</tt> bug, which is a nasty hardware issue that occurs on the original Game Boy.
           Basically, that bug causes spurious LCD interrupts to trigger when the <tt>rSTAT</tt> register is written to.
           In this article, we'll only write to the <tt>rSTAT</tt> register from inside the interrupt function, so the bug won't occur, and thus, we don't need to write code specifically to counter it.
-
+        </p>
+        <p>
           Figure 2 is a video of the hblank sample.
           It consists of an astronauts walking on a planet.
         </p>
@@ -122,6 +123,7 @@
           Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
         </p>
         <p>
+          On the Game Boy, the horizontal scrolling of the background is controlled by the <tt>rSCX</tt> register.
           Only one scrolling value -> need to change it for each layer.
         </p>
 
