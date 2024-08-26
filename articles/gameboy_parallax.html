@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Coding Adventure</title>
     <link rel="stylesheet" href="../bootstrap.min.css">
+    <style>
+      .asmlisting {
+        border: 2px dashed white;
+        padding: 20px;
+        margin: 0;
+        width: fit-content
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
@@ -58,7 +66,7 @@
           You'll also be able to choose the best parallax techniques for your game.
         </p>
 
-        <h4>Target audience</h4>
+        <h4>Target Audience</h4>
           <p>
             Anyone interested in game development can grasp the concepts presented in this article.
             However, you should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
@@ -67,7 +75,7 @@
             It is a complete coverage of all the aspects the Game Boy, using a beginner-friendly approach for those new to assembly.
           </p>
 
-        <h4>What is parallax scrolling</h4>
+        <h4>What is Parallax Scrolling</h4>
           <p>
             Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
             The effect of parallax scrolling is shown in Figure 1.
@@ -83,7 +91,7 @@
             So, we have to leverage the hardware capabilities to mimic the effect of having several background layers.
           </p>
 
-      <h4>The hblank method</h4>
+      <h4>The hblank Method</h4>
         <p>
           The first technique we'll study is the <i>hblank</i> method.
           In my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, I go over two versions of hblank parallax:
@@ -93,57 +101,219 @@
           This ends up wasting a lot of cycles that could be better used for actual game logic.
           The optimized implementation fixed the performance issue of the naive implementation by using the line compare interrupt.
           This was reducing the number of interrupts from 144 to 4 during the LCD refresh.
-          The only issue of the optimized implementation is that it would trigger the <tt>rSTAT</tt> bug.
-          The <tt>rSTAT</tt> bug is a nasty hardware issue that occurs on the original Game Boy.
-          The bug causes spurious LCD interrupts to trigger when the <tt>rSTAT</tt> register is written to.
+          The only issue of the optimized implementation is that it would trigger the <code>rSTAT</code> bug.
+          The <code>rSTAT</code> bug is a nasty hardware issue that occurs on the original Game Boy.
+          The bug causes spurious LCD interrupts to trigger when the <code>rSTAT</code> register is written to.
           In this article, we'll use a modified version of the optimized implementation.
-          It has the benefit of avoiding the <tt>rSTAT</tt> bug by writing to the <tt>rSTAT</tt> register exclusively from inside the interrupt function.
+          It has the benefit of avoiding the <code>rSTAT</code> bug by writing to the <code>rSTAT</code> register exclusively from inside the interrupt function.
           This makes it the best implementation of the three.
         </p>
+
+        <h5>Checking the Sample</h5>
+          <p>
+            Figure 2 is a video of the hblank sample.
+            It consists in an astronaut walking on a planet.
+          </p>
+          <figure>
+            <video autoplay loop muted preload="auto">
+              <source src="../video/parallax/hblank.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <figcaption>Figure 2: Parallax scrolling using the hblank method</figcaption>
+          </figure>
+          <p>
+            The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
+            To achieve this parallax effect, the idea is to split the screen horizontally into three different layers.
+            The top layer contains the planets and stars.
+            The middle layer contains the rocks.
+            The bottom layer contains the ground on which the astronauts walks.
+            The layers are shown in Figure 3, with red lines separating them.
+          </p>
+          <figure>
+            <img src="../images/parallax/layers.png" alt="Parallax layers">
+            <figcaption>Figure 3: Parallax layers</figcaption>
+          </figure>
+          <p>
+            The sky layer extends from lines 0 to 87.
+            The rock spans lines 88 to 111.
+            The ground covers the remaining lines, from 112 to 143.
+            Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
+          </p>
+
+        <h5>Understanding the Algorithm</h5>
+          <p>
+            On the Game Boy, the horizontal scrolling of the background is controlled by the <code>rSCX</code> register.
+            We'll use the hblank interrupt to change the value of the <code>rSCX</code> register on lines 87 and 111.
+          </p>
+          <p>
+            First, we'll compute the horizontal scrolling value for all three layers.
+            Those scrolling values will be updated based on the movement of the astronaut.
+            We'll use different variables to compute the scrolling values to avoid any interference with the current LCD refresh.
+            Then, during the vblank, we'll set the <code>rSCX</code> register to the value of the sky scrolling.
+            We'll also copy the values for the scrolling of the rocks and ground into variables used in the interrupts.
+            Finally, when the next LCD refresh starts, the scrolling for the sky will be correct already.
+            As the interrupts trigger on lines 87 and 111, the <code>rSCX</code> register gets updated with the appropriate scrolling value.
+            This creates the parallax effect.
+            We'll see that there are a few more details when we check the actual assembly code.
+          </p>
+
+        <h5>Diving into the Sample Code</h5>
         <p>
-          Figure 2 is a video of the hblank sample.
-          It consists in an astronaut walking on a planet.
+          In this section, we'll dive into the sample code.
+          We'll see the most important details of the implementation.
+          You can get the fully commented code at XXX.
+          There is also a prebuilt ROM available at XXX.
+        </p>
+        <p>
+          The sample declares several constants, as shown in Listing 1.
         </p>
         <figure>
-          <video autoplay loop muted preload="auto">
-            <source src="../video/parallax/hblank.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
-          <figcaption>Figure 2: Parallax scrolling using the hblank method</figcaption>
-        </figure>
+          <pre class="asmlisting">
+def LINE_ROCKS                      equ 87
+def LINE_GROUND                     equ 111
+
+def SKY_SPEED_X                     equ $0040
+def ROCKS_SPEED_X                   equ $0080
+def GROUND_SPEED_X                  equ $0100</pre>
+        <figcaption>Listing 1: Constants declaration</figcaption>
         <p>
-          The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
-          To achieve this parallax effect, the idea is to split the screen horizontally into three different layers.
-          The top layer contains the planets and stars.
-          The middle layer contains the rocks.
-          The bottom layer contains the ground on which the astronauts walks.
-          The layers are shown in Figure 3, with red lines separating them.
+          First, we have two constants, <code>LINE_ROCKS</code> and <code>LINE_GROUND</code>, that define the lines on which we'll change the scrolling values for the rocks and ground respectively.
+          Then, we define the speeds at which the sky, rocks, and ground moves when the astronaut walks around.
+          We use 16-bit literals to have a more granular control over the speed of each layer.
+          Those literals are fixed-point numbers.
+          The most significant byte of the literal represents the integral part, while the least significant byte represents the fractional part.
+          For example, <code>GROUND_SPEED_X</code> represents the number <code>1.0</code>, and <code>ROCKS_SPEED_X</code> represents <code>0.5</code>.
+        </p>
+        <p>
+          The sample uses several variables to store the layers' scrolling values.
+          In the sample, all the variables are stored in WRAM, but you could also have them in HRAM and benefits from the <code>ldh</code> instruction.
+          The variables are shown in Listing 2.
         </p>
         <figure>
-          <img src="../images/parallax/layers.png" alt="Parallax layers">
-          <figcaption>Figure 3: Parallax layers</figcaption>
-        </figure>
+          <pre class="asmlisting">
+rsset _RAM
+    ...
+
+    def WRAM_SKY_POSITION_X             rb 2
+    def WRAM_ROCKS_POSITION_X           rb 2
+    def WRAM_GROUND_POSITION_X          rb 2
+
+    def WRAM_ROCKS_SCROLLING_X          rb 1
+    def WRAM_GROUND_SCROLLING_X         rb 1</pre>
+        <figcaption>Listing 2: Variables declaration</figcaption>
         <p>
-          The sky layer extends from lines 0 to 87.
-          The rock spans lines 88 to 111.
-          The ground covers the remaining lines, from 112 to 143.
-          Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
+          First, we have the three fixed-point numbers to hold the positions of each layer.
+          We'll see how these are updated soon.
+          Then, we have two <i>buffer</i> variables.
+          These hold the values meant to be copied to the <code>rSCX</code> register during the hblank interrupts.
+          Their values is basically equal to the high bytes of the corresponding positions.
+          For example, <code>WRAM_ROCKS_SCROLLING_X</code> will hold the high byte of <code>WRAM_ROCKS_POSITION_X</code>.
+          The reason we don't use the positions' high byte directly is that we need to keep the scrolling values stable during the LCD refresh, at least until line 112.
+          Because the positions might get updated in the sample main loop before the interrupts are triggered, we need to copy their value to those buffer variables that are guaranteed to be stable through the LCD refresh.
+          Note that we don't have a buffer variables for the sky.
+          We'll see why that is when we check the vblank code.
         </p>
-        <p>
-          On the Game Boy, the horizontal scrolling of the background is controlled by the <tt>rSCX</tt> register.
-          We'll use the hblank interrupt to change the value of the <tt>rSCX</tt> register on lines 87 and 111.
-        </p>
-        <p>
-          First, we'll compute the horizontal scrolling value for all three layers.
-          Those scrolling values will be updated based on the movement of the astronaut.
-          We'll use different variables to compute the scrolling values to avoid any interference with the current LCD refresh.
-          Then, during the vblank, we'll set the <tt>rSCX</tt> register to the value of the sky scrolling.
-          We'll also copy the values for the scrolling of the rocks and ground into variables used in the interrupts.
-          Finally, when the next LCD refresh starts, the scrolling for the sky will be correct already.
-          As the interrupts trigger on lines 87 and 111, the <tt>rSCX</tt> register gets updated with the appropriate scrolling value.
-          This creates the parallax effect.
-          We'll see that there are a few more details when we check the actual assembly code.
-        </p>
+
+        <figure>
+          <pre class="asmlisting">
+LcdInterrupt:
+    ; Set the zero flag if we are not in the hblank
+    ldh a, [rSTAT]
+    bit STATB_MODE00, a
+
+    ; Enable the hblank interrupt, disable the line interrupt
+    ; This does not affect the flag register
+    ld a, STATF_MODE00
+    ldh [rSTAT], a
+
+    ; Return early if we are not in the hblank
+    ret z
+
+    ; Check whether we are on the line right before the rocks
+    ld a, [rLY]
+    cp a, LINE_ROCKS
+    jr nz, .middle_section
+        ; Set up the rocks scrolling
+        ld a, [WRAM_ROCKS_SCROLLING_X]
+        ldh [rSCX], a
+
+        ; Set the target line for the ground
+        ld a, LINE_GROUND
+        ldh [rLYC], a
+
+        ; Enable the line interrupt, disable the hblank interrupt
+        ld a, STATF_LYC
+        ldh [rSTAT], a
+
+        ret
+    .middle_section
+
+    ; From here, we know we are on the line right before the ground
+
+    ; Set up the ground scrolling
+    ld a, [WRAM_GROUND_SCROLLING_X]
+    ldh [rSCX], a
+
+    ; Set the target line for the next frame
+    ld a, LINE_ROCKS
+    ldh [rLYC], a
+
+    ; Enable the line interrupt, disable the hblank interrupt
+    ld a, STATF_LYC
+    ldh [rSTAT], a
+
+    ret</pre>
+        <figcaption>Listing XXX: xxx listing</figcaption>
+
+        <figure>
+          <pre class="asmlisting">
+; Set the target line for the first frame
+ld a, LINE_ROCKS
+ldh [rLYC], a
+
+; Enable the line interrupt
+ld a, STATF_LYC
+ldh [rSTAT], a
+
+; Enable the vblank and lcd interrupts
+ld a, IEF_VBLANK | IEF_LCDC
+ld [rIE], a
+ei</pre>
+        <figcaption>Listing XXX: xxx listing</figcaption>
+
+        <figure>
+          <pre class="asmlisting">
+; Set up the sky scrolling from inside the vblank
+ld a, [WRAM_SKY_POSITION_X + 1]
+ld [rSCX], a
+
+; Copy the rocks and ground scrolling to use in the interrupts
+ld a, [WRAM_ROCKS_POSITION_X + 1]
+ld [WRAM_ROCKS_SCROLLING_X], a
+ld a, [WRAM_GROUND_POSITION_X + 1]
+ld [WRAM_GROUND_SCROLLING_X], a</pre>
+        <figcaption>Listing XXX: xxx listing</figcaption>
+
+        <figure>
+          <pre class="asmlisting">
+.astronaut_move
+    ; Update all the scrolling values based on the astronaut direction
+    ld a, [ASTRONAUT_MOVE_DIRECTION]
+    cp a, DIRECTION_LEFT
+    jr nz, .direction_left
+        u16_sub WRAM_SKY_POSITION_X, SKY_SPEED_X
+        u16_sub WRAM_ROCKS_POSITION_X, ROCKS_SPEED_X
+        u16_sub WRAM_GROUND_POSITION_X, GROUND_SPEED_X
+        jr .astronaut_move_done
+    .direction_left
+    cp a, DIRECTION_RIGHT
+    jr nz, .direction_right
+        u16_add WRAM_SKY_POSITION_X, SKY_SPEED_X
+        u16_add WRAM_ROCKS_POSITION_X, ROCKS_SPEED_X
+        u16_add WRAM_GROUND_POSITION_X, GROUND_SPEED_X
+    .direction_right
+.astronaut_move_done</pre>
+        <figcaption>Listing XXX: xxx listing</figcaption>
 
       <h4>The tile method</h4>
         <figure>
@@ -161,9 +331,11 @@
       <!--
         Content
           Introduction
+            All tested on real hardware
             Works in Game Boy Color
             Note on ghosting
                 Rule of thumb to design tiles that scroll well (refer to games)
+            RGBDS toolchain
           Using interrupts
             hblank
             line compare
