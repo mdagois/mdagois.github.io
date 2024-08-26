@@ -212,88 +212,38 @@ rsset _RAM
           Because the positions might get updated in the sample main loop before the interrupts are triggered, we need to copy their value to those buffer variables that are guaranteed to be stable through the LCD refresh.
           Note that we don't have a buffer variables for the sky.
           We'll see why that is when we check the vblank code.
+          All the WRAM variables will be cleared to zero at initialization time.
         </p>
-
+        <p>
+          At initialization time, the sample sets the interrupts as shown in Listing 3.
+        </p>
         <figure>
           <pre class="asmlisting">
-LcdInterrupt:
-    ; Set the zero flag if we are not in the hblank
-    ldh a, [rSTAT]
-    bit STATB_MODE00, a
-
-    ; Enable the hblank interrupt, disable the line interrupt
-    ; This does not affect the flag register
-    ld a, STATF_MODE00
-    ldh [rSTAT], a
-
-    ; Return early if we are not in the hblank
-    ret z
-
-    ; Check whether we are on the line right before the rocks
-    ld a, [rLY]
-    cp a, LINE_ROCKS
-    jr nz, .middle_section
-        ; Set up the rocks scrolling
-        ld a, [WRAM_ROCKS_SCROLLING_X]
-        ldh [rSCX], a
-
-        ; Set the target line for the ground
-        ld a, LINE_GROUND
-        ldh [rLYC], a
-
-        ; Enable the line interrupt, disable the hblank interrupt
-        ld a, STATF_LYC
-        ldh [rSTAT], a
-
-        ret
-    .middle_section
-
-    ; From here, we know we are on the line right before the ground
-
-    ; Set up the ground scrolling
-    ld a, [WRAM_GROUND_SCROLLING_X]
-    ldh [rSCX], a
-
-    ; Set the target line for the next frame
-    ld a, LINE_ROCKS
-    ldh [rLYC], a
-
-    ; Enable the line interrupt, disable the hblank interrupt
-    ld a, STATF_LYC
-    ldh [rSTAT], a
-
-    ret</pre>
-        <figcaption>Listing XXX: xxx listing</figcaption>
-
-        <figure>
-          <pre class="asmlisting">
-; Set the target line for the first frame
 ld a, LINE_ROCKS
 ldh [rLYC], a
 
-; Enable the line interrupt
 ld a, STATF_LYC
 ldh [rSTAT], a
 
-; Enable the vblank and lcd interrupts
 ld a, IEF_VBLANK | IEF_LCDC
 ld [rIE], a
 ei</pre>
-        <figcaption>Listing XXX: xxx listing</figcaption>
-
-        <figure>
-          <pre class="asmlisting">
-; Set up the sky scrolling from inside the vblank
-ld a, [WRAM_SKY_POSITION_X + 1]
-ld [rSCX], a
-
-; Copy the rocks and ground scrolling to use in the interrupts
-ld a, [WRAM_ROCKS_POSITION_X + 1]
-ld [WRAM_ROCKS_SCROLLING_X], a
-ld a, [WRAM_GROUND_POSITION_X + 1]
-ld [WRAM_GROUND_SCROLLING_X], a</pre>
-        <figcaption>Listing XXX: xxx listing</figcaption>
-
+        <figcaption>Listing 3: Sample initialization</figcaption>
+        <p>
+          First, we set the target line, in the <code>rLYC</code> register, for the line compare interrupt to the value of the rocks line (<code>LINE_ROCKS</code>).
+          The target line will change through the frame, but at the start of every frame, it will always set back to <code>LINE_ROCKS</code>, because that's the first line on which we need to change the value of the <code>rSCX</code> register every frame.
+          Then, we raise the flag for the line compare interrupt in the <code>rSTAT</code> register.
+          This is an essential step to enable the line compare interrupt, which is one type of LCD interrupt.
+          Note that the hblank flag isn't raised yet in the <code>rSTAT</code> register.
+          We don't want hblank interrupts to trigger on each line as it would waste cycles.
+          We'll raise the flag only when necessary.
+          Finally, we enable both the vblank and LCD interrupts.
+          The vblank interrupt is essential for frame pacing, and we'll also use it to prepare for the line and hblank interrupts.
+          The LCD interrupt is an umbrella interrupt that encompass the the line compare and hblank interrupts, which we rely on to implement the parallax effect.
+        </p>
+        <p>
+          During the LCD refresh, we compute the position of all the layers for the next frame, as shown in Listing 4.
+        </p>
         <figure>
           <pre class="asmlisting">
 .astronaut_move
@@ -313,7 +263,74 @@ ld [WRAM_GROUND_SCROLLING_X], a</pre>
         u16_add WRAM_GROUND_POSITION_X, GROUND_SPEED_X
     .direction_right
 .astronaut_move_done</pre>
-        <figcaption>Listing XXX: xxx listing</figcaption>
+        <figcaption>Listing 4: Layer positions update</figcaption>
+        <p>
+          We add or subtract the speeds to the layer positions based on the direction the astronaut is walking to.
+          The <code>u16_add</code> and <code>u16_sub</code> macros handle the fixed-point arithmetic.
+          You can check their code in the GitHub repository.
+        </p>
+        <p>
+          The updated positions are used during the vblank to prepare for the interrupts.
+          The relevant vblank code is shown in Listing 5.
+        </p>
+        <figure>
+          <pre class="asmlisting">
+ld a, [WRAM_SKY_POSITION_X + 1]
+ld [rSCX], a
+
+ld a, [WRAM_ROCKS_POSITION_X + 1]
+ld [WRAM_ROCKS_SCROLLING_X], a
+ld a, [WRAM_GROUND_POSITION_X + 1]
+ld [WRAM_GROUND_SCROLLING_X], a</pre>
+        <figcaption>Listing 5: Scrolling update during vblank</figcaption>
+        <p>
+          First, we update the <code>rSCX</code> register so that it has the sky scrolling value when the LCD refresh starts.
+          Then, as mentioned earlier, we use buffer variables, <code>WRAM_ROCKS_SCROLLING_X</code> and <code>WRAM_GROUND_SCROLLING_X</code>, to keep the scrolling values for the rocks and ground layers stable during the whole LCD refresh, and in particular, for the corresponding hblank interrupts.
+        </p>
+        <p>
+          The final piece of the algorithm is the LCD interrupt function, which handles both the line compare interrupts and the hblank interrupts.
+          The complete function is shown in Listing 6.
+        </p>
+        <figure>
+          <pre class="asmlisting">
+LcdInterrupt:
+    ldh a, [rSTAT]
+    bit STATB_MODE00, a
+
+    ld a, STATF_MODE00
+    ldh [rSTAT], a
+
+    ret z
+
+    ld a, [rLY]
+    cp a, LINE_ROCKS
+    jr nz, .middle_section
+        ld a, [WRAM_ROCKS_SCROLLING_X]
+        ldh [rSCX], a
+
+        ld a, LINE_GROUND
+        ldh [rLYC], a
+
+        ld a, STATF_LYC
+        ldh [rSTAT], a
+
+        ret
+    .middle_section
+
+    ld a, [WRAM_GROUND_SCROLLING_X]
+    ldh [rSCX], a
+
+    ld a, LINE_ROCKS
+    ldh [rLYC], a
+
+    ld a, STATF_LYC
+    ldh [rSTAT], a
+
+    ret</pre>
+        <figcaption>Listing 6: The LCD interrupt function</figcaption>
+        <p>
+          XXX
+        </p>
 
       <h4>The tile method</h4>
         <figure>
