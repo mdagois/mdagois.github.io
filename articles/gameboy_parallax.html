@@ -176,6 +176,7 @@ def SKY_SPEED_X                     equ $0040
 def ROCKS_SPEED_X                   equ $0080
 def GROUND_SPEED_X                  equ $0100</pre>
         <figcaption>Listing 1: Constants declaration</figcaption>
+        <br/>
         <p>
           First, we have two constants, <code>LINE_ROCKS</code> and <code>LINE_GROUND</code>, that define the lines on which we'll change the scrolling values for the rocks and ground respectively.
           Then, we define the speeds at which the sky, rocks, and ground moves when the astronaut walks around.
@@ -201,6 +202,7 @@ rsset _RAM
     def WRAM_ROCKS_SCROLLING_X          rb 1
     def WRAM_GROUND_SCROLLING_X         rb 1</pre>
         <figcaption>Listing 2: Variables declaration</figcaption>
+        <br/>
         <p>
           First, we have the three fixed-point numbers to hold the positions of each layer.
           We'll see how these are updated soon.
@@ -229,6 +231,7 @@ ld a, IEF_VBLANK | IEF_LCDC
 ld [rIE], a
 ei</pre>
         <figcaption>Listing 3: Sample initialization</figcaption>
+        <br/>
         <p>
           First, we set the target line, in the <code>rLYC</code> register, for the line compare interrupt to the value of the rocks line (<code>LINE_ROCKS</code>).
           The target line will change through the frame, but at the start of every frame, it will always set back to <code>LINE_ROCKS</code>, because that's the first line on which we need to change the value of the <code>rSCX</code> register every frame.
@@ -264,6 +267,7 @@ ei</pre>
     .direction_right
 .astronaut_move_done</pre>
         <figcaption>Listing 4: Layer positions update</figcaption>
+        <br/>
         <p>
           We add or subtract the speeds to the layer positions based on the direction the astronaut is walking to.
           The <code>u16_add</code> and <code>u16_sub</code> macros handle the fixed-point arithmetic.
@@ -283,6 +287,7 @@ ld [WRAM_ROCKS_SCROLLING_X], a
 ld a, [WRAM_GROUND_POSITION_X + 1]
 ld [WRAM_GROUND_SCROLLING_X], a</pre>
         <figcaption>Listing 5: Scrolling update during vblank</figcaption>
+        <br/>
         <p>
           First, we update the <code>rSCX</code> register so that it has the sky scrolling value when the LCD refresh starts.
           Then, as mentioned earlier, we use buffer variables, <code>WRAM_ROCKS_SCROLLING_X</code> and <code>WRAM_GROUND_SCROLLING_X</code>, to keep the scrolling values for the rocks and ground layers stable during the whole LCD refresh, and in particular, for the corresponding hblank interrupts.
@@ -328,8 +333,124 @@ LcdInterrupt:
 
     ret</pre>
         <figcaption>Listing 6: The LCD interrupt function</figcaption>
+        <br/>
         <p>
-          XXX
+          This interrupt function is called four times per LCD refresh.
+          It is easier to understand the code by going through, in order, each interrupt that occur during the LCD refresh.
+        </p>
+        <p>
+          The first interrupt to occur during the LCD refresh is the line compare interrupt on line 87, which we set up at initialization time.
+          While the interrupt occurs on line 87, we cannot set the <code>rSCX</code> register yet.
+          The value of the <code>rSCX</code> register is partially latched at the start of each line.
+          On one hand, the line compare interrupt on line 87 is too early, because that lines belongs to the sky layer.
+          On the other hand, the line compare interrupt on line 88 is too late, because the line would still use a part of the value of the sky scrolling. 
+          As a consequence, the only place where it is correct to change the value of the <code>rSCX</code> register is the hblank of line 87.
+        </p>
+        <p>
+          The block formed by the first five instructions in the interrupt function have a dual purpose.
+          First, it enables the hblank interrupt, also knows as <i>mode 00</i> interrupt.
+          Second, it returns early if we are in the hblank yet.
+          The relevant instructions from the interrupt function are shown in Listing 7.
+        </p>
+        <figure>
+          <pre class="asmlisting">
+ldh a, [rSTAT]
+bit STATB_MODE00, a
+
+ld a, STATF_MODE00
+ldh [rSTAT], a
+
+ret z</pre>
+        <figcaption>Listing 7: The code handling the line compare interrupt</figcaption>
+        <br/>
+        <p>
+          The first two instructions checks if the hblank flag, also known as mode 00 flag, is set in the <code>rSTAT</code> register.
+          If the mode 00 flag is clear, then the zero flag gets raised.
+          Otherwise, the zero flag gets cleared.
+          In the case of the line compare interrupt on line 87, the flag gets cleared, because we are not in the hblank yet (the line compare interrupt happens at the start of the line).
+          The next two instructions enable the hblank interrupt, so that an interrupt triggers at the end of the line.
+          The last instruction returns early, because we are not yet in a hblank interrupt, so the zero flag was cleared by the <code>bit</code> instruction.
+        </p>
+        <p>
+          The next interrupt to trigger is the hblank interrupt on line 87.
+          The execution go through the same exact first five instructions, but the function does not return early this time, because the hblank flag is up in the <code>rSTAT</code> register.
+          The code additionally executes the instructions in the Listing 8.
+        </p>
+        <figure>
+          <pre class="asmlisting">
+ld a, [rLY]
+cp a, LINE_ROCKS
+jr nz, .middle_section
+    ld a, [WRAM_ROCKS_SCROLLING_X]
+    ldh [rSCX], a
+
+    ld a, LINE_GROUND
+    ldh [rLYC], a
+
+    ld a, STATF_LYC
+    ldh [rSTAT], a
+
+    ret
+.middle_section</pre>
+        <figcaption>Listing 8: The code handling the line 87 hblank</figcaption>
+        <br/>
+        <p>
+          The code checks if the interrupt occured on line 87 (<code>LINE_ROCKS</code>).
+          As this is the case in the hblank of line 87, the six instructions after the <code>jr</code> instruction are executed.
+          First, the <code>rSCX</code> register is updated with the scrolling value for the rocks.
+          Then, target line for the line compare interrupt is set to 111 (<code>LINE_GROUND</code>).
+          Next, the line compare interrupt is re-enabled, so that we get an line compare interrupt on line 111.
+          Note that the hblank interrupt is disabled here.
+          This is important, because we don't want to trigger hblank interrupts on line 88 to 110 for performance reason.
+          Finally, the function returns, as there is nothing else to do to handle the rocks layer.
+        </p>
+        <p>
+          The next interrupt occurs on line 111.
+          This is the line compare interrupt that has been set up in Listing 8.
+          That new line compare interrupt is handled by Listing 7, just like the first line compare interrupt.
+          The interrupt function basically enables the hblank interrupt and returns early.
+        </p>
+        <p>
+          The last interrupt is the hblank interrupt on line 111.
+          This time the function does not return early, and goes through the instructions shown in Listing 9.
+        </p>
+        <figure>
+          <pre class="asmlisting">
+ld a, [rLY]
+cp a, LINE_ROCKS
+jr nz, .middle_section
+  ...
+.middle_section
+
+ld a, [WRAM_GROUND_SCROLLING_X]
+ldh [rSCX], a
+
+ld a, LINE_ROCKS
+ldh [rLYC], a
+
+ld a, STATF_LYC
+ldh [rSTAT], a
+
+ret</pre>
+        <figcaption>Listing 9: The code handling the line 111 hblank</figcaption>
+        <br/>
+        <p>
+          Because we are now on line 111, the <code>jr nz, .middle_section</code> does jump to the <code>.middle_section</code> label.
+          The instructions at the end of the function then get executed.
+          These instructions are very similar to those in Listing 8, with only two differences.
+          The first difference is that the <code>rSCX</code> register gets updated with the scrolling value for the ground.
+          The second difference is that the target line for the line compare interrupt is brought back to 87 (<code>LINE_GROUND</code>), which is to prepare for the next frame.
+        </p>
+
+        <h5>Closing comments on the hblank method</h5>
+        <p>
+          That's it for the hblank method.
+          It relies on the proper usage of the line compare and hblank interrupts to update the the <code>rSCX</code> register at key timings to create the parallax effect.
+          The advantage of this method is that it is well supported by the hardware.
+          The LCD interrupts make the code efficient, and we only need a handful of instructions and variables to implement the parallax.
+          You could easily had more layers, but remember that each additional layers will consume some cycles, so there will be less cycles left for the game logic.
+          The main drawback of the hblank method is that layers cannot overlap.
+          To get overlapping elements, you'd have to use sprites, with all the limitations they come with, such as the ten sprites limit per line.
         </p>
 
       <h4>The tile method</h4>
@@ -339,12 +460,11 @@ LcdInterrupt:
             Your browser does not support the video tag.
           </video>
           <figcaption>Figure XXX: Parallax scrolling using the tile method</figcaption>
+        <br/>
         <p>
         </p>
 
       <h4>Conclusion</h4>
-        <!--If you want to know everything there is to know about Game Boy programming, please check out my book on the subject, <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.-->
-
       <!--
         Content
           Introduction
@@ -354,14 +474,8 @@ LcdInterrupt:
                 Rule of thumb to design tiles that scroll well (refer to games)
             RGBDS toolchain
           Using interrupts
-            hblank
-            line compare
-            Using sprites for overlap
-            Using one single halt or several halts
-            rSCX latched at the start of the line
-            Split from 2 to n layers
-            Benefit: supported in hardware (light weight)
-            Drawback: layers cannot overlap unless using sprites, but hit sprite limits + only 2 colors (bg sees through)
+            Explain hblank
+            Explain line compare
           Using tiles
             Explanation
             Benefit: layers can overlap, can work vertically, works for top down views (zelda-like or shmups)
