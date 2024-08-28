@@ -552,7 +552,7 @@ ret</pre>
         <figcaption>Figure 7: Parallax tiles</figcaption>
       </figure>
       <p>
-      Those patterns can then be exported, in order, and included in the ROM.
+      In the sample, those patterns are exported, in order, and included in the ROM.
       </p>
 
       <h5>Diving into the Sample Code</h5>
@@ -570,25 +570,114 @@ def BYTES_PER_TILE                  equ 16
 def WALL_TILE_COUNT                 equ 4
 
 def FOREGROUND_SPEED_X              equ $0100
-def BACKGROUND_SPEED_X              equ $0080</pre>
-        <figcaption>Listing 10: xxx</figcaption>
-        <p>
-        </p>
+def BACKGROUND_COUNTER_SPEED_X      equ $0080</pre>
+        <figcaption>Listing 10: Constants from the tile parallax sample</figcaption>
+      </figure>
+      <p>
+      The number of byte per tiles, <code>BYTES_PER_TILE</code> is not specific to this algorithm, but it is not declared anywhere, and we need it for formulas we'll see later in this section.
+      The <code>WALL_TILE_COUNT</code> constant correspond to the number of tiles in the pattern from Figure 5.
+      The two remaining constants are the speed of the parallax layers.
+      The <code>FOREGROUND_SPEED_X</code> variable applies to the foreground, which consists of the ground and the boxes.
+      The <code>BACKGROUND_COUNTER_SPEED_X</code> variable is for the background, which correspond to the wall covered by the tile pattern.
+      It is named <i>counter speed</i> because it express the speed of the background relative to the foreground.
+      When it is equal to <code>$0000</code>, the background would move in unison with the foreground.
+      That is, there would be no parallax effect.
+      With a counter speed equal to the foreground speed (<code>$0100</code> here), the background would be fixed to the LCD, not moving at all.
+      In the sample, the counter speed is set to half the speed of the foreground, which creates a smooth parallax effect.
+      Feel free to try different values to see how it works.
+      It is even possible to make the background move faster than the foreground by setting a counter speed higher than <code>$0100</code>.
+      </p>
+      <p>
+      Next, the sample declares a few variables in WRAM, as shown in Listing 11.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+rsset _RAM
+    ...
 
-        <figure>
-          <pre class="asmlisting">
-def WRAM_FOREGROUND_X               rb 2
-def WRAM_BACKGROUND_X               rb 2
+    def WRAM_FOREGROUND_POSITION_X      rb 2
+    def WRAM_BACKGROUND_POSITION_X      rb 2
 
-def WRAM_WALL_STARTING_TILE_ADDRESS rb 2</pre>
-          <figcaption>Listing 11: xxx</figcaption>
-        </figure>
+    def WRAM_WALL_STARTING_TILE_ADDRESS rb 2</pre>
+        <figcaption>Listing 11: Variables from the tile parallax sample</figcaption>
+      </figure>
+      <p>
+      The first two variables are 16-bit numbers used to track the positions of both layers.
+      Like in the hblank parallax sample, these are fixed-point numbers with their high byte dedicated to the integral part of the number.
+      The <code>WRAM_WALL_STARTING_TILE_ADDRESS</code> variable holds the starting ROM address of the tiles we need to transfer to VRAM to create the parallax effect of the background.
+      We'll see how all these variables are computed next, starting with the layer positions in Listing 12.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+.astronaut_move
+    ld a, [ASTRONAUT_MOVE_DIRECTION]
+    cp a, DIRECTION_LEFT
+    jr nz, .direction_left
+        u16_sub WRAM_FOREGROUND_POSITION_X, FOREGROUND_SPEED_X
+        u16_sub WRAM_BACKGROUND_POSITION_X, BACKGROUND_COUNTER_SPEED_X
+        jr .astronaut_move_done
+    .direction_left
+    cp a, DIRECTION_RIGHT
+    jr nz, .direction_right
+        u16_add WRAM_FOREGROUND_POSITION_X, FOREGROUND_SPEED_X
+        u16_add WRAM_BACKGROUND_POSITION_X, BACKGROUND_COUNTER_SPEED_X
+    .direction_right
+.astronaut_move_done</pre>
+        <figcaption>Listing 12: Computation of the layer positions</figcaption>
+      </figure>
+      <p>
+      This code is very similar the code in the hblank sample.
+      We add or subtract the speeds to the layer positions based on the direction the astronaut.
+      Again, you can check the code for the <code>u16_add</code> and <code>u16_sub</code> macros in the GitHub repository.
+      </p>
+      <p>
+      The computation of the <code></code> variable is shown in Listing 13.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+.compute_wall_tile_address
+    ld a, [WRAM_BACKGROUND_POSITION_X + 1]
+    and a, $0F
 
-        <figure>
-          <pre class="asmlisting">
-CopyMemory _OAMRAM, ASTRONAUT_SPRITES, sizeof_OAM_ATTRS * 2
+    swap a
+    ld h, 0
+    ld l, a
+    add hl, hl
+    add hl, hl
 
-ld a, [WRAM_FOREGROUND_X + 1]
+    ld de, ship_parallax_chr
+    add hl, de
+
+    ld a, l
+    ld [WRAM_WALL_STARTING_TILE_ADDRESS + 0], a
+    ld a, h
+    ld [WRAM_WALL_STARTING_TILE_ADDRESS + 1], a
+.compute_wall_tile_address_done</pre>
+        <figcaption>Listing 13: Computation of the background tiles' starting address</figcaption>
+      </figure>
+      <p>
+      The first two instructions compute the index of the tile combination we need for the next frame from the position of the background layer.
+      The whole operation consists of a <i>modulo 16</i> on the position, because we have 16 tile combinations.
+      </p>
+      <p>
+      The next set of five instructions computes the offset of the tile combination in memory.
+      All these instructions are basically a multiplication by 64, because we have 16 bytes per tile and 4 tiles per tile combination.
+      The <code>swap a</code> instruction is an efficient way to multiply by 16.
+      The multiplied number must be below 15, which is the case here.
+      The number is then put in the <code>hl</code> register and added to itself twice, which is equivalent to multiplying by 4.
+      At the end of those instruction, we do have the desired offset in the <code>hl</code> register.
+      </p>
+      <p>
+      Once we have the offset, we add it to the address of the tiles in the ROM, <code>ship_parallax_chr</code>, to get the actual address of the tile combination we need to copy over to VRAM.
+      We can't copy the data to VRAM just yet; we need to perform the copy during the vblank, when we have write access to the VRAM.
+      The last four instructions save the starting address we computed to WRAM, so that we can use it during the next vblank.
+      </p>
+      <p>
+      The last piece of the tile parallax method is the vblank, shown in Listing 14.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+ld a, [WRAM_FOREGROUND_POSITION_X + 1]
 ld [rSCX], a
 
 ld a, [WRAM_WALL_STARTING_TILE_ADDRESS + 0]
@@ -603,91 +692,63 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
     inc de
     dec c
     jr nz, .copy_wall_tiles</pre>
-          <figcaption>Listing xxx: xxx</figcaption>
-        </figure>
+        <figcaption>Listing 14: Vblank operations</figcaption>
+      </figure>
+      <p>
+      During the vblank, the <code>rSCX</code> register is updated to reflect the movement of the foreground.
+      The parallax tiles are also copied over to VRAM.
+      The source address computed earlier is first unpacked in the <code>hl</code> register.
+      Then, 4 tiles, or 64 bytes (<code>BYTES_PER_TILE * WALL_TILE_COUNT</code>) of data, are copied to VRAM.
+      The destination address in VRAM is <code>$8800</code>, because that's where the background pattern tiles are located in the sample.
+      You can verify the location of the pattern tiles with BGB's VRAM viewer, shown in Figure 8.
+      </p>
+      <figure>
+        <img src="../images/parallax/vram_viewer.png" alt="Sample VRAM">
+        <figcaption>Figure 8: Sample VRAM</figcaption>
+      </figure>
+      <p>
+      The four pattern tiles are highlighted in red.
+      Every frame, we update those four tiles with the tile combination that matches the desired position of the background layer.
+      </p>
 
-        <figure>
-          <pre class="asmlisting">
-.astronaut_move
-    ld a, [ASTRONAUT_MOVE_DIRECTION]
-    cp a, DIRECTION_LEFT
-    jr nz, .direction_left
-        u16_sub WRAM_FOREGROUND_X, FOREGROUND_SPEED_X
-        u16_sub WRAM_BACKGROUND_X, BACKGROUND_SPEED_X
-        jr .astronaut_move_done
-    .direction_left
-    cp a, DIRECTION_RIGHT
-    jr nz, .direction_right
-        u16_add WRAM_FOREGROUND_X, FOREGROUND_SPEED_X
-        u16_add WRAM_BACKGROUND_X, BACKGROUND_SPEED_X
-    .direction_right
-.astronaut_move_done</pre>
-          <figcaption>Listing xxx: xxx</figcaption>
-        </figure>
+      <h5>Closing Comments</h5>
+      <p>
+      That's it for the tile method.
+      At its core, it is all about copying the right tiles from ROM to VRAM each frame.
+      It creates a very convincing parallax effect by just swapping the tile graphics used for the background.
+      The benefit of the technique is that layers can overlap.
+      Another benefit is that the technique also allows for vertical parallax, such as those used in vertical shmups.
+      It is even possible to design parallax effects on both directions.
+      The main drawback is the amount of ROM space you need to dedicate to the tile combinations.
+      The ROM space budget can quickly balloon out of proportion as the tile pattern grows in size, or is allowed to scroll in both directions.
+      It is possible to update the tile indices in the tilemap (in addition to the tile graphics) to mitigate the ROM space consumption.
+      Another drawback is that the technique adds a lot of worload in the vblank, leaving less cycles for any other work, such as sprites or regular tile animation.
+      We'll see a technique using the stack to boost the speed of transfer speed on the DMG in a subsequent article.
+      On the CGB, it is possible to use DMA to make those transfers way faster.
+      </p>
 
-        <figure>
-          <pre class="asmlisting">
-.compute_wall_tile_address
-    ld a, [WRAM_BACKGROUND_X + 1]
-    and a, $0F
+      <h4>Conclusion</h4>
+      <p>
+      In this article, we covered two techniques to create parallax effects on the Game Boy.
+      You should now have a good grasp of how to implement both techniques.
+      You should also understand their benefits and drawbacks, and be able to choose the right technique for your games.
+      It is possible to mix both technique together too, and many commercial games did so.
+      This article presents the basis of both techniques, but it is always possible to tailor and improve upon these techniques to match your specific needs and create more impressive effects.
+      </p>
+      <p>
+      One thing to keep in mind is to not make layers scroll too quickly.
+      The DMG LCD suffers from heavy ghosting, and the blurring of your art would waste the parallax effect.
+      </p>
+      <p>
+      If the content of this article is a bit overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
+      It is a smoother introduction to basically everything there is to say about Game Boy programming.
+      <p>
 
-    swap a
-    ld h, 0
-    ld l, a
-    sla l
-    rl h
-    sla l
-    rl h
-
-    ld de, ship_parallax_chr
-    add hl, de
-
-    ld a, l
-    ld [WRAM_WALL_STARTING_TILE_ADDRESS + 0], a
-    ld a, h
-    ld [WRAM_WALL_STARTING_TILE_ADDRESS + 1], a
-.compute_wall_tile_address_done</pre>
-          <figcaption>Listing xxx: xxx</figcaption>
-        </figure>
-
-        <h5>Closing Comments</h5>
-        <p>
-        That's it for the tile method.
-        At its core, it is all about copying the right tiles from ROM to VRAM each frame.
-        It creates a very convincing parallax effect by just swapping the tile graphics used for the background.
-        The benefit of the technique is that layers can overlap.
-        Another benefit is that the technique also allows for vertical parallax, such as those used in vertical shmups.
-        It is even possible to design parallax effects on both directions.
-        The main drawback is the amount of ROM space you need to dedicate to the tile combinations.
-        The ROM space budget can quickly balloon out of proportion as the tile pattern grows in size, or is allowed to scroll in both directions.
-        It is possible to update the tile indices in the tilemap (in addition to the tile graphics) to mitigate the ROM space consumption.
-        Another drawback is that the technique adds a lot of worload in the vblank, leaving less cycles for any other work, such as sprites or regular tile animation.
-        We'll see a technique using the stack to boost the speed of transfer speed on the DMG in a subsequent article.
-        On the CGB, it is possible to use DMA to make those transfers way faster.
-        </p>
-
-        <h4>Conclusion</h4>
-        <p>
-        In this article, we covered two techniques to create parallax effects on the Game Boy.
-        You should now have a good grasp of how to implement both techniques.
-        You should also understand their benefits and drawbacks, and be able to choose the right technique for your games.
-        It is possible to mix both technique together too, and many commercial games did so.
-        This article presents the basis of both techniques, but it is always possible to tailor and improve upon these techniques to match your specific needs and create more impressive effects.
-        </p>
-        <p>
-        One thing to keep in mind is to not make layers scroll too quickly.
-        The DMG LCD suffers from heavy ghosting, and the blurring of your art would waste the parallax effect.
-        </p>
-        <p>
-        If the content of this article is a bit overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
-        It is a smoother introduction to basically everything there is to say about Game Boy programming.
-        <p>
-
-        <h4>Art Attribution</h4>
-        <p>
-        The backgrounds used in the samples are from <a href="https://rumblecade.itch.io/" target="_blank">Rumblecade</a>.
-        The astronaut is from <a href="https://dizabanik.itch.io/" target="_blank">Dizabanik Games</a>.
-        </p>
+      <h4>Art Attribution</h4>
+      <p>
+      The backgrounds used in the samples are from <a href="https://rumblecade.itch.io/" target="_blank">Rumblecade</a>.
+      The astronaut is from <a href="https://dizabanik.itch.io/" target="_blank">Dizabanik Games</a>.
+      </p>
 
     </div>
 
