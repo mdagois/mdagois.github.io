@@ -52,11 +52,9 @@
       It presents two techniques that you can use to add parallax scrolling to your Game Boy games.
       </p>
       <p>
-      We'll start by reviewing what parallax scrolling is, and what the challenges are to implement it on the Game Boy.
-      </p>
-      <p>
+      We'll start by reviewing what parallax scrolling is, and what the challenges are to implement this effect on the Game Boy.
       Then, we'll go over the two parallax techniques: the <i>hblank</i> method and the <i>tile</i> method.
-      We'll show how to implement those techniques and explain their benefits and drawbacks.
+      We'll see how to implement those techniques and explain their benefits and drawbacks.
       </p>
       <p>
       By the end of the article, you'll have a strong grasp of what it takes to implement parallax scrolling on the Game Boy.
@@ -75,19 +73,19 @@
       The further away a layer is meant to be from the observer, the slower it moves.
       </p>
       <p>
-      What makes parallax scrolling challenging on the Game Boy is that the console only supports one single background layer.
-      So, we have to leverage the hardware capabilities and use some tricks to mimic the effect of having several background layers.
+      What makes parallax scrolling challenging on the Game Boy is that the console features only one single background layer with scrolling support.
+      In order to implement parallax scrolling, we have to leverage other hardware capabilities and use some tricks to mimic the effect of having several scrolling background layers.
       </p>
       <p>
-      We'll use code samples to show all the implementation details of the parallax techniques.
-      The fully commented source code for the samples is downloadable <a href="../samples/parallax.zip">here</a>.
-      There are also prebuilt ROMs available in the zip file so that you can run the sample without having to build them first.
+      This article uses code samples to show all the implementation details of the parallax techniques.
+      You can download a zip file containing the fully commented source code for the samples <a href="../samples/parallax.zip">here</a>.
+      The zip file also includes prebuilt ROMs so that you can run the samples without having to build them first.
       The samples are written in assembly for the <a href="https://rgbds.gbdev.io/" target="_blank">RGBDS toolchain</a>.
       They have been tested on both the BGB emulator and real hardware.
       </p>
       <p>
-      While the samples are made for the original Game Boy (DMG), the techniques used are relevant for the Game Boy Color (CGB) too.
-      The concepts presented in this article should also be suitable to games programmed in C, and the techniques might be applicable to other consoles as well, such as the NES and Master System.
+      While the samples are made for the original Game Boy, the techniques used are relevant for the Game Boy Color too.
+      The concepts introduced in this article should also be suitable to games programmed in C, and the techniques presented might be applicable to other consoles as well, such as the NES and Master System.
       </p>
       <p>
       You should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
@@ -149,10 +147,10 @@
 
       <h5>About Interrupts</h5>
       <p>
-      If you master interrupts on the DMG, you can skip this section.
+      If you master interrupts on the Game Boy, you can skip this section.
       </p>
       <p>
-      The DMG has five types of interrupts.
+      The Game Boy has five types of interrupts.
       In a nutshell, an interrupt is a function that gets called when a particular hardware event occurs.
       The hblank method heavily uses the LCD interrupt.
       This interrupt is a kind of umbrealla, configurable, interrupt.
@@ -164,7 +162,7 @@
       For the hblank method, we'll use two type of LCD interrupts: the <i>line compare</i> interrupt and the <i>hblank</i> interrupt.
       The line compare interrupt triggers at the start of any LCD line we choose.
       They are 144 lines on the LCD, going from line 0 to line 143.
-      For example, if we choose line 100, the LCD interrupt function will get called when DMG starts drawing that line.
+      For example, if we choose line 100, the LCD interrupt function will get called when Game Boy starts drawing that line.
       The hblank interrupt triggers at the end of each LCD line, from 0 to 143.
       The hblank interrupt is very important, because this is the only timing on a line when we have full access to the VRAM.
       The hblank is also known as <i>mode 00</i> and we'll use that term in this article from time to time.
@@ -719,8 +717,8 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       The ROM space budget can quickly balloon out of proportion as the tile pattern grows in size, or is allowed to scroll in both directions.
       It is possible to update the tile indices in the tilemap (in addition to the tile graphics) to mitigate the ROM space consumption.
       Another drawback is that the technique adds a lot of worload in the vblank, leaving less cycles for any other work, such as sprites or regular tile animation.
-      We'll see a technique using the stack to boost the speed of transfer speed on the DMG in a subsequent article.
-      On the CGB, it is possible to use DMA to make those transfers way faster.
+      We'll see a technique using the stack to boost the speed of transfer speed on the Game Boy in a subsequent article.
+      On the Game Boy Color, it is possible to use DMA to make those transfers way faster.
       </p>
 
       <h4>Conclusion</h4>
@@ -733,7 +731,7 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       </p>
       <p>
       One thing to keep in mind is to not make layers scroll too quickly.
-      The DMG LCD suffers from heavy ghosting, and the blurring of your art would waste the parallax effect.
+      The Game Boy LCD suffers from heavy ghosting, and the blurring of your art would waste the parallax effect.
       </p>
       <p>
       If the content of this article feels overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
@@ -743,7 +741,8 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       <h4>Art Attribution</h4>
       <p>
       The backgrounds used in the samples are from <a href="https://rumblecade.itch.io/" target="_blank">Rumblecade</a>.
-      The astronaut is from <a href="https://dizabanik.itch.io/" target="_blank">Dizabanik Games</a>.
+      The astronaut character is from <a href="https://dizabanik.itch.io/" target="_blank">Dizabanik Games</a>.
+      The art has been slightly modified to meet the limitations of the Game Boy hardware.
       </p>
 
     </div>
