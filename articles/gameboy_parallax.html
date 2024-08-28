@@ -6,169 +6,199 @@
     <title>Coding Adventure</title>
     <link rel="stylesheet" href="../bootstrap.min.css">
     <style>
-      .asmlisting {
-        border: 2px dashed white;
-        padding: 20px;
-        margin: 0;
-        width: fit-content
-      }
+.asmlisting {
+  border: 2px dashed white;
+  padding: 20px;
+  margin: 0;
+  width: fit-content
+}
     </style>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
       <div class="container-fluid">
-      <div class="navbar-brand">Coding Adventures</div>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarColor01">
-        <ul class="navbar-nav me-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="../index.html">Home</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="../portfolio.html">Portfolio</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="../about.html">About</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="../contact.html">Contact</a>
-        </li>
-        </ul>
-      </div>
+        <div class="navbar-brand">Coding Adventures</div>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarColor01">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="../index.html">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="../portfolio.html">Portfolio</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="../about.html">About</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="../contact.html">Contact</a>
+            </li>
+          </ul>
+        </div>
       </div>
     </nav>
 
     <div class="container">
       <br/>
       <p>
-        <img src="../images/gameboy.png" alt="gameboy" class="rounded mx-auto d-block">
+      <img src="../images/gameboy.png" alt="gameboy" class="rounded mx-auto d-block">
       </p>
 
       <h3>Parallax Scrolling on the Game Boy</h3>
-        <p>
-          This article is an in-depth guide to implementing parallax scrolling on the Game Boy.
-          It presents two techniques that you can use to add parallax scrolling to your Game Boy games.
-        </p>
-        <p>
-          We'll start by reviewing what parallax scrolling is, and what the challenges are to implement it on the Game Boy.
-        </p>
-        <p>
-          Then, we'll go over the two parallax techniques: the <i>hblank</i> method and the <i>tile</i> method.
-          We'll show how to implement those techniques and explain their benefits and drawbacks.
-          We'll use assembly code samples to show all the implementation details.
-          However, the concepts presented in this article should also be relevant to games programmed in C,
-          and the techniques might be applicable to other consoles as well, such as the NES or Master System.
-        </p>
-        <p>
-          By the end of the article, you'll have a strong grasp of what it takes to implement parallax scrolling on the Game Boy.
-          You'll also be able to choose the best parallax techniques for your game.
-        </p>
+      <p>
+      This article is an in-depth guide to implementing parallax scrolling on the Game Boy.
+      It presents two techniques that you can use to add parallax scrolling to your Game Boy games.
+      </p>
+      <p>
+      We'll start by reviewing what parallax scrolling is, and what the challenges are to implement it on the Game Boy.
+      </p>
+      <p>
+      Then, we'll go over the two parallax techniques: the <i>hblank</i> method and the <i>tile</i> method.
+      We'll show how to implement those techniques and explain their benefits and drawbacks.
+      We'll use assembly code samples to show all the implementation details.
+      However, the concepts presented in this article should also be relevant to games programmed in C,
+      and the techniques might be applicable to other consoles as well, such as the NES or Master System.
+      </p>
+      <p>
+      By the end of the article, you'll have a strong grasp of what it takes to implement parallax scrolling on the Game Boy.
+      You'll also be able to choose the best parallax techniques for your game.
+      </p>
 
-        <h4>Target Audience</h4>
-          <p>
-            Anyone interested in game development can grasp the concepts presented in this article.
-            However, you should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
-            To get a strong introduction to Game Boy programming in assembly, I recommend you to check my book,
-            <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.
-            It is a complete coverage of all the aspects the Game Boy, using a beginner-friendly approach for those new to assembly.
-          </p>
+      <h4>Introduction</h4>
+      <h5>What is Parallax Scrolling</h5>
+      <p>
+      Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
+      The effect of parallax scrolling is shown in Figure 1.
+      <figure>
+        <img src="../images/parallax/parallax_scrolling.gif" alt="Parallax scrolling">
+        <figcaption>Figure 1: Parallax scrolling</figcaption>
+      </figure>
+      Graphics elements are placed on distinct layers that moves at different paces.
+      The further away a layer is meant to be from the observer, the slower it moves.
+      </p>
+      <p>
+      What makes parallax scrolling challenging on the Game Boy is that the console only supports one single background layer.
+      So, we have to leverage the hardware capabilities to mimic the effect of having several background layers.
+      </p>
 
-        <h4>What is Parallax Scrolling</h4>
-          <p>
-            Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
-            The effect of parallax scrolling is shown in Figure 1.
-            <figure>
-              <img src="../images/parallax/parallax_scrolling.gif" alt="Parallax scrolling">
-              <figcaption>Figure 1: Parallax scrolling</figcaption>
-            </figure>
-            Graphics elements are placed on distinct layers that moves at different paces.
-            The further away a layer is meant to be from the observer, the slower it moves.
-          </p>
-          <p>
-            What makes parallax scrolling challenging on the Game Boy is that the console only supports one single background layer.
-            So, we have to leverage the hardware capabilities to mimic the effect of having several background layers.
-          </p>
+      <h5>Target Audience</h5>
+      <p>
+      Anyone interested in game development can grasp the concepts presented in this article.
+      However, you should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
+      To get a strong introduction to Game Boy programming in assembly, I recommend you to check my book,
+      <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.
+      It is a complete coverage of all the aspects the Game Boy, using a beginner-friendly approach for those new to assembly.
+      </p>
+
+      <h5>About the samples</h5>
+      <p>
+      The source code for the samples is available at xxx.
+      The source code is written in assembly for the <a href="https://rgbds.gbdev.io/" target="_blank">RGBDS toolchain</a>.
+      The samples have been tested no both the BGB emulator and real hardware.
+      While the samples are made for the original Game Boy (DMG), the techniques used also work on the Game Boy Color (CGB).
+      </p>
 
       <h4>The Hblank Method</h4>
-        <p>
-          The first technique we'll study is the <i>hblank</i> method.
-          In my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, I go over two versions of hblank parallax:
-          one <i>naive</i> implementation and one <i>optimized</i> implementation.
-          The naive implementation uses the hblank interrupt exclusively to set the scrolling value.
-          The problem with this implementation is that we get interrupts on each line, even though we are only interested in two lines (87 and 111).
-          This ends up wasting a lot of cycles that could be better used for actual game logic.
-          The optimized implementation fixed the performance issue of the naive implementation by using the line compare interrupt.
-          This was reducing the number of interrupts from 144 to 4 during the LCD refresh.
-          The only issue of the optimized implementation is that it would trigger the <code>rSTAT</code> bug.
-          The <code>rSTAT</code> bug is a nasty hardware issue that occurs on the original Game Boy.
-          The bug causes spurious LCD interrupts to trigger when the <code>rSTAT</code> register is written to.
-          In this article, we'll use a modified version of the optimized implementation.
-          It has the benefit of avoiding the <code>rSTAT</code> bug by writing to the <code>rSTAT</code> register exclusively from inside the interrupt function.
-          This makes it the best implementation of the three.
-        </p>
+      <p>
+      The first technique we'll study is the <i>hblank</i> method.
+      In my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, I go over two versions of hblank parallax:
+      one <i>naive</i> implementation and one <i>optimized</i> implementation.
+      The naive implementation uses the hblank interrupt exclusively to set the scrolling value.
+      The problem with this implementation is that we get interrupts on each line, even though we are only interested in two lines (87 and 111).
+      This ends up wasting a lot of cycles that could be better used for actual game logic.
+      The optimized implementation fixed the performance issue of the naive implementation by using the line compare interrupt.
+      This was reducing the number of interrupts from 144 to 4 during the LCD refresh.
+      The only issue of the optimized implementation is that it would trigger the <code>rSTAT</code> bug.
+      The <code>rSTAT</code> bug is a nasty hardware issue that occurs on the original Game Boy.
+      The bug causes spurious LCD interrupts to trigger when the <code>rSTAT</code> register is written to.
+      In this article, we'll use a modified version of the optimized implementation.
+      It has the benefit of avoiding the <code>rSTAT</code> bug by writing to the <code>rSTAT</code> register exclusively from inside the interrupt function.
+      This makes it the best implementation of the three.
+      </p>
 
-        <h5>Checking the Sample</h5>
-          <p>
-            Figure 2 is a short video of the hblank sample.
-            It consists in an astronaut walking on a planet.
-          </p>
-          <figure>
-            <video autoplay loop muted preload="auto">
-              <source src="../video/parallax/hblank.mp4" type="video/mp4">
-              Your browser does not support the video tag.
-            </video>
-            <figcaption>Figure 2: Parallax scrolling using the hblank method</figcaption>
-          </figure>
-          <p>
-            The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
-            To achieve this parallax effect, the idea is to split the screen horizontally into three different layers.
-            The top layer contains the planets and stars.
-            The middle layer contains the rocks.
-            The bottom layer contains the ground on which the astronauts walks.
-            The layers are shown in Figure 3, with red lines separating them.
-          </p>
-          <figure>
-            <img src="../images/parallax/layers.png" alt="Parallax layers">
-            <figcaption>Figure 3: Parallax layers</figcaption>
-          </figure>
-          <p>
-            The sky layer extends from lines 0 to 87.
-            The rock spans lines 88 to 111.
-            The ground covers the remaining lines, from 112 to 143.
-            Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
-          </p>
+      <h5>About Interrupts</h5>
+      <p>
+      If you master interrupts on the DMG, you can skip that section.
+      The DMG has five types of interrupts.
+      In a nutshell, an interrupt is a function that gets called when a particular hardware event occurs.
+      The hblank method heavily uses the LCD interrupt.
+      This interrupt is a kind of umbrealla, configurable, interrupt.
+      By umbrella, I mean it is actually linked to more than one hardware event, though all the events it covers are related to the LCD.
+      By configurable, I mean that we can choose which hardware events will trigger the interrupt at any given time.
+      In essence, from the programmer perspective, the LCD interrupt is one function that will get called when a set of hardware events of our choosing occur.
+      </p>
+      <p>
+      For the hblank method, we'll use two type of LCD interrupts: the <i>line compare</i> interrupt and the <i>hblank</i> interrupt.
+      The line compare interrupt triggers at the start of any LCD line we choose.
+      They are 144 lines on the LCD, going from line 0 to line 143.
+      For example, if we choose line 100, the LCD interrupt function will get called when DMG starts drawing that line.
+      The hblank interrupt triggers at the end of each LCD line, from 0 to 143.
+      The hblank interrupt is very important, because this is the only timing on a line when we have full access to the VRAM.
+      The hblank is also known as <i>mode 00</i> and we'll use that term in this article from time to time.
+      </p>
 
-        <h5>Understanding the Algorithm</h5>
-          <p>
-            On the Game Boy, the horizontal scrolling of the background is controlled by the <code>rSCX</code> register.
-            We'll use the hblank interrupt to change the value of the <code>rSCX</code> register on lines 87 and 111.
-          </p>
-          <p>
-            First, we'll compute the horizontal scrolling value for all three layers.
-            Those scrolling values will be updated based on the movement of the astronaut.
-            We'll use different variables to compute the scrolling values to avoid any interference with the current LCD refresh.
-            Then, during the vblank, we'll set the <code>rSCX</code> register to the value of the sky scrolling.
-            We'll also copy the values for the scrolling of the rocks and ground into variables used in the interrupts.
-            Finally, when the next LCD refresh starts, the scrolling for the sky will be correct already.
-            As the interrupts trigger on lines 87 and 111, the <code>rSCX</code> register gets updated with the appropriate scrolling value.
-            This creates the parallax effect.
-            We'll see that there are a few more details when we check the actual assembly code.
-          </p>
+      <h5>Checking the Sample</h5>
+      <p>
+      Figure 2 is a short video of the hblank sample.
+      It consists in an astronaut walking on a planet.
+      </p>
+      <figure>
+        <video autoplay loop muted preload="auto">
+          <source src="../video/parallax/hblank.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        <figcaption>Figure 2: Parallax scrolling using the hblank method</figcaption>
+      </figure>
+      <p>
+      The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
+      To achieve this parallax effect, the idea is to split the screen horizontally into three different layers.
+      The top layer contains the planets and stars.
+      The middle layer contains the rocks.
+      The bottom layer contains the ground on which the astronauts walks.
+      The layers are shown in Figure 3, with red lines separating them.
+      </p>
+      <figure>
+        <img src="../images/parallax/layers.png" alt="Parallax layers">
+        <figcaption>Figure 3: Parallax layers</figcaption>
+      </figure>
+      <p>
+      The sky layer extends from lines 0 to 87.
+      The rock spans lines 88 to 111.
+      The ground covers the remaining lines, from 112 to 143.
+      Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
+      </p>
 
-        <h5>Diving into the Sample Code</h5>
-        <p>
-          In this section, we'll dive into the sample code.
-          We'll see the most important details of the implementation.
-          You can get the fully commented code at xxx.
-          There is also a prebuilt ROM available at xxx.
-        </p>
-        <p>
-          The sample declares several constants, as shown in Listing 1.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      <h5>Understanding the Algorithm</h5>
+      <p>
+      On the Game Boy, the horizontal scrolling of the background is controlled by the <code>rSCX</code> register.
+      We'll use the hblank interrupt to change the value of the <code>rSCX</code> register on lines 87 and 111.
+      </p>
+      <p>
+      First, we'll compute the horizontal scrolling value for all three layers.
+      Those scrolling values will be updated based on the movement of the astronaut.
+      We'll use different variables to compute the scrolling values to avoid any interference with the current LCD refresh.
+      Then, during the vblank, we'll set the <code>rSCX</code> register to the value of the sky scrolling.
+      We'll also copy the values for the scrolling of the rocks and ground into variables used in the interrupts.
+      Finally, when the next LCD refresh starts, the scrolling for the sky will be correct already.
+      As the interrupts trigger on lines 87 and 111, the <code>rSCX</code> register gets updated with the appropriate scrolling value.
+      This creates the parallax effect.
+      We'll see that there are a few more details when we check the actual assembly code.
+      </p>
+
+      <h5>Diving into the Sample Code</h5>
+      <p>
+      In this section, we'll dive into the sample code.
+      We'll see the most important details of the implementation.
+      You can get the fully commented code at xxx.
+      There is also a prebuilt ROM available at xxx.
+      </p>
+      <p>
+      The sample declares several constants, as shown in Listing 1.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 def LINE_ROCKS                      equ 87
 def LINE_GROUND                     equ 111
 
@@ -176,22 +206,22 @@ def SKY_SPEED_X                     equ $0040
 def ROCKS_SPEED_X                   equ $0080
 def GROUND_SPEED_X                  equ $0100</pre>
         <figcaption>Listing 1: Constants declaration</figcaption>
-        <br/>
-        <p>
-          First, we have two constants, <code>LINE_ROCKS</code> and <code>LINE_GROUND</code>, that define the lines on which we'll change the scrolling values for the rocks and ground respectively.
-          Then, we define the speeds at which the sky, rocks, and ground moves when the astronaut walks around.
-          We use 16-bit literals to have a more granular control over the speed of each layer.
-          Those literals are fixed-point numbers.
-          The most significant byte of the literal represents the integral part, while the least significant byte represents the fractional part.
-          For example, <code>GROUND_SPEED_X</code> represents the number <code>1.0</code>, and <code>ROCKS_SPEED_X</code> represents <code>0.5</code>.
-        </p>
-        <p>
-          The sample uses several variables to store the layers' scrolling values.
-          In the sample, all the variables are stored in WRAM, but you could also have them in HRAM and benefits from the <code>ldh</code> instruction.
-          The variables are shown in Listing 2.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      </figure>
+      <p>
+      First, we have two constants, <code>LINE_ROCKS</code> and <code>LINE_GROUND</code>, that define the lines on which we'll change the scrolling values for the rocks and ground respectively.
+      Then, we define the speeds at which the sky, rocks, and ground moves when the astronaut walks around.
+      We use 16-bit literals to have a more granular control over the speed of each layer.
+      Those literals are fixed-point numbers.
+      The most significant byte of the literal represents the integral part, while the least significant byte represents the fractional part.
+      For example, <code>GROUND_SPEED_X</code> represents the number <code>1.0</code>, and <code>ROCKS_SPEED_X</code> represents <code>0.5</code>.
+      </p>
+      <p>
+      The sample uses several variables to store the layers' scrolling values.
+      In the sample, all the variables are stored in WRAM, but you could also have them in HRAM and benefits from the <code>ldh</code> instruction.
+      The variables are shown in Listing 2.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 rsset _RAM
     ...
 
@@ -202,25 +232,25 @@ rsset _RAM
     def WRAM_ROCKS_SCROLLING_X          rb 1
     def WRAM_GROUND_SCROLLING_X         rb 1</pre>
         <figcaption>Listing 2: Variables declaration</figcaption>
-        <br/>
-        <p>
-          First, we have the three fixed-point numbers to hold the positions of each layer.
-          We'll see how these are updated soon.
-          Then, we have two <i>buffer</i> variables.
-          These hold the values meant to be copied to the <code>rSCX</code> register during the hblank interrupts.
-          Their values is basically equal to the high bytes of the corresponding positions.
-          For example, <code>WRAM_ROCKS_SCROLLING_X</code> will hold the high byte of <code>WRAM_ROCKS_POSITION_X</code>.
-          The reason we don't use the positions' high byte directly is that we need to keep the scrolling values stable during the LCD refresh, at least until line 112.
-          Because the positions might get updated in the sample main loop before the interrupts are triggered, we need to copy their value to those buffer variables that are guaranteed to be stable through the LCD refresh.
-          Note that we don't have a buffer variables for the sky.
-          We'll see why that is when we check the vblank code.
-          All the WRAM variables will be cleared to zero at initialization time.
-        </p>
-        <p>
-          At initialization time, the sample sets the interrupts as shown in Listing 3.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      </figure>
+      <p>
+      First, we have the three fixed-point numbers to hold the positions of each layer.
+      We'll see how these are updated soon.
+      Then, we have two <i>buffer</i> variables.
+      These hold the values meant to be copied to the <code>rSCX</code> register during the hblank interrupts.
+      Their values is basically equal to the high bytes of the corresponding positions.
+      For example, <code>WRAM_ROCKS_SCROLLING_X</code> will hold the high byte of <code>WRAM_ROCKS_POSITION_X</code>.
+      The reason we don't use the positions' high byte directly is that we need to keep the scrolling values stable during the LCD refresh, at least until line 112.
+      Because the positions might get updated in the sample main loop before the interrupts are triggered, we need to copy their value to those buffer variables that are guaranteed to be stable through the LCD refresh.
+      Note that we don't have a buffer variables for the sky.
+      We'll see why that is when we check the vblank code.
+      All the WRAM variables will be cleared to zero at initialization time.
+      </p>
+      <p>
+      At initialization time, the sample sets the interrupts as shown in Listing 3.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 ld a, LINE_ROCKS
 ldh [rLYC], a
 
@@ -231,24 +261,24 @@ ld a, IEF_VBLANK | IEF_LCDC
 ld [rIE], a
 ei</pre>
         <figcaption>Listing 3: Sample initialization</figcaption>
-        <br/>
-        <p>
-          First, we set the target line, in the <code>rLYC</code> register, for the line compare interrupt to the value of the rocks line (<code>LINE_ROCKS</code>).
-          The target line will change through the frame, but at the start of every frame, it will always set back to <code>LINE_ROCKS</code>, because that's the first line on which we need to change the value of the <code>rSCX</code> register every frame.
-          Then, we raise the flag for the line compare interrupt in the <code>rSTAT</code> register.
-          This is an essential step to enable the line compare interrupt, which is one type of LCD interrupt.
-          Note that the hblank flag isn't raised yet in the <code>rSTAT</code> register.
-          We don't want hblank interrupts to trigger on each line as it would waste cycles.
-          We'll raise the flag only when necessary.
-          Finally, we enable both the vblank and LCD interrupts.
-          The vblank interrupt is essential for frame pacing, and we'll also use it to prepare for the line and hblank interrupts.
-          The LCD interrupt is an umbrella interrupt that encompass the the line compare and hblank interrupts, which we rely on to implement the parallax effect.
-        </p>
-        <p>
-          During the LCD refresh, we compute the position of all the layers for the next frame, as shown in Listing 4.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      </figure>
+      <p>
+      First, we set the target line, in the <code>rLYC</code> register, for the line compare interrupt to the value of the rocks line (<code>LINE_ROCKS</code>).
+      The target line will change through the frame, but at the start of every frame, it will always set back to <code>LINE_ROCKS</code>, because that's the first line on which we need to change the value of the <code>rSCX</code> register every frame.
+      Then, we raise the flag for the line compare interrupt in the <code>rSTAT</code> register.
+      This is an essential step to enable the line compare interrupt, which is one type of LCD interrupt.
+      Note that the hblank flag isn't raised yet in the <code>rSTAT</code> register.
+      We don't want hblank interrupts to trigger on each line as it would waste cycles.
+      We'll raise the flag only when necessary.
+      Finally, we enable both the vblank and LCD interrupts.
+      The vblank interrupt is essential for frame pacing, and we'll also use it to prepare for the line and hblank interrupts.
+      The LCD interrupt is an umbrella interrupt that encompass the the line compare and hblank interrupts, which we rely on to implement the parallax effect.
+      </p>
+      <p>
+      During the LCD refresh, we compute the position of all the layers for the next frame, as shown in Listing 4.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 .astronaut_move
     ; Update all the scrolling values based on the astronaut direction
     ld a, [ASTRONAUT_MOVE_DIRECTION]
@@ -267,18 +297,18 @@ ei</pre>
     .direction_right
 .astronaut_move_done</pre>
         <figcaption>Listing 4: Layer positions update</figcaption>
-        <br/>
-        <p>
-          We add or subtract the speeds to the layer positions based on the direction the astronaut is walking to.
-          The <code>u16_add</code> and <code>u16_sub</code> macros handle the fixed-point arithmetic.
-          You can check their code in the GitHub repository.
-        </p>
-        <p>
-          The updated positions are used during the vblank to prepare for the interrupts.
-          The relevant vblank code is shown in Listing 5.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      </figure>
+      <p>
+      We add or subtract the speeds to the layer positions based on the direction the astronaut is walking to.
+      The <code>u16_add</code> and <code>u16_sub</code> macros handle the fixed-point arithmetic.
+      You can check their code in the GitHub repository.
+      </p>
+      <p>
+      The updated positions are used during the vblank to prepare for the interrupts.
+      The relevant vblank code is shown in Listing 5.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 ld a, [WRAM_SKY_POSITION_X + 1]
 ld [rSCX], a
 
@@ -287,17 +317,17 @@ ld [WRAM_ROCKS_SCROLLING_X], a
 ld a, [WRAM_GROUND_POSITION_X + 1]
 ld [WRAM_GROUND_SCROLLING_X], a</pre>
         <figcaption>Listing 5: Scrolling update during vblank</figcaption>
-        <br/>
-        <p>
-          First, we update the <code>rSCX</code> register so that it has the sky scrolling value when the LCD refresh starts.
-          Then, as mentioned earlier, we use buffer variables, <code>WRAM_ROCKS_SCROLLING_X</code> and <code>WRAM_GROUND_SCROLLING_X</code>, to keep the scrolling values for the rocks and ground layers stable during the whole LCD refresh, and in particular, for the corresponding hblank interrupts.
-        </p>
-        <p>
-          The final piece of the algorithm is the LCD interrupt function, which handles both the line compare interrupts and the hblank interrupts.
-          The complete function is shown in Listing 6.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      </figure>
+      <p>
+      First, we update the <code>rSCX</code> register so that it has the sky scrolling value when the LCD refresh starts.
+      Then, as mentioned earlier, we use buffer variables, <code>WRAM_ROCKS_SCROLLING_X</code> and <code>WRAM_GROUND_SCROLLING_X</code>, to keep the scrolling values for the rocks and ground layers stable during the whole LCD refresh, and in particular, for the corresponding hblank interrupts.
+      </p>
+      <p>
+      The final piece of the algorithm is the LCD interrupt function, which handles both the line compare interrupts and the hblank interrupts.
+      The complete function is shown in Listing 6.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 LcdInterrupt:
     ldh a, [rSTAT]
     bit STATB_MODE00, a
@@ -333,27 +363,27 @@ LcdInterrupt:
 
     ret</pre>
         <figcaption>Listing 6: The LCD interrupt function</figcaption>
-        <br/>
-        <p>
-          This interrupt function is called four times per LCD refresh.
-          It is easier to understand the code by going through, in order, each interrupt that occur during the LCD refresh.
-        </p>
-        <p>
-          The first interrupt to occur during the LCD refresh is the line compare interrupt on line 87, which we set up at initialization time.
-          While the interrupt occurs on line 87, we cannot set the <code>rSCX</code> register yet.
-          The value of the <code>rSCX</code> register is partially latched at the start of each line.
-          On one hand, the line compare interrupt on line 87 is too early, because that lines belongs to the sky layer.
-          On the other hand, the line compare interrupt on line 88 is too late, because the line would still use a part of the value of the sky scrolling. 
-          As a consequence, the only place where it is correct to change the value of the <code>rSCX</code> register is the hblank of line 87.
-        </p>
-        <p>
-          The block formed by the first five instructions in the interrupt function have a dual purpose.
-          First, it enables the hblank interrupt, also knows as <i>mode 00</i> interrupt.
-          Second, it returns early if we are in the hblank yet.
-          The relevant instructions from the interrupt function are shown in Listing 7.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      </figure>
+      <p>
+      This interrupt function is called four times per LCD refresh.
+      It is easier to understand the code by going through, in order, each interrupt that occur during the LCD refresh.
+      </p>
+      <p>
+      The first interrupt to occur during the LCD refresh is the line compare interrupt on line 87, which we set up at initialization time.
+      While the interrupt occurs on line 87, we cannot set the <code>rSCX</code> register yet.
+      The value of the <code>rSCX</code> register is partially latched at the start of each line.
+      On one hand, the line compare interrupt on line 87 is too early, because that lines belongs to the sky layer.
+      On the other hand, the line compare interrupt on line 88 is too late, because the line would still use a part of the value of the sky scrolling. 
+      As a consequence, the only place where it is correct to change the value of the <code>rSCX</code> register is the hblank of line 87.
+      </p>
+      <p>
+      The block formed by the first five instructions in the interrupt function have a dual purpose.
+      First, it enables the hblank interrupt, also knows as <i>mode 00</i> interrupt.
+      Second, it returns early if we are in the hblank yet.
+      The relevant instructions from the interrupt function are shown in Listing 7.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 ldh a, [rSTAT]
 bit STATB_MODE00, a
 
@@ -362,22 +392,22 @@ ldh [rSTAT], a
 
 ret z</pre>
         <figcaption>Listing 7: The code handling the line compare interrupt</figcaption>
-        <br/>
-        <p>
-          The first two instructions checks if the hblank flag, also known as mode 00 flag, is set in the <code>rSTAT</code> register.
-          If the mode 00 flag is clear, then the zero flag gets raised.
-          Otherwise, the zero flag gets cleared.
-          In the case of the line compare interrupt on line 87, the flag gets cleared, because we are not in the hblank yet (the line compare interrupt happens at the start of the line).
-          The next two instructions enable the hblank interrupt, so that an interrupt triggers at the end of the line.
-          The last instruction returns early, because we are not yet in a hblank interrupt, so the zero flag was cleared by the <code>bit</code> instruction.
-        </p>
-        <p>
-          The next interrupt to trigger is the hblank interrupt on line 87.
-          The execution go through the same exact first five instructions, but the function does not return early this time, because the hblank flag is up in the <code>rSTAT</code> register.
-          The code additionally executes the instructions in the Listing 8.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      </figure>
+      <p>
+      The first two instructions checks if the hblank flag, also known as mode 00 flag, is set in the <code>rSTAT</code> register.
+      If the mode 00 flag is clear, then the zero flag gets raised.
+      Otherwise, the zero flag gets cleared.
+      In the case of the line compare interrupt on line 87, the flag gets cleared, because we are not in the hblank yet (the line compare interrupt happens at the start of the line).
+      The next two instructions enable the hblank interrupt, so that an interrupt triggers at the end of the line.
+      The last instruction returns early, because we are not yet in a hblank interrupt, so the zero flag was cleared by the <code>bit</code> instruction.
+      </p>
+      <p>
+      The next interrupt to trigger is the hblank interrupt on line 87.
+      The execution go through the same exact first five instructions, but the function does not return early this time, because the hblank flag is up in the <code>rSTAT</code> register.
+      The code additionally executes the instructions in the Listing 8.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 ld a, [rLY]
 cp a, LINE_ROCKS
 jr nz, .middle_section
@@ -393,29 +423,29 @@ jr nz, .middle_section
     ret
 .middle_section</pre>
         <figcaption>Listing 8: The code handling the line 87 hblank</figcaption>
-        <br/>
-        <p>
-          The code checks if the interrupt occured on line 87 (<code>LINE_ROCKS</code>).
-          As this is the case in the hblank of line 87, the six instructions after the <code>jr</code> instruction are executed.
-          First, the <code>rSCX</code> register is updated with the scrolling value for the rocks.
-          Then, target line for the line compare interrupt is set to 111 (<code>LINE_GROUND</code>).
-          Next, the line compare interrupt is re-enabled, so that we get an line compare interrupt on line 111.
-          Note that the hblank interrupt is disabled here.
-          This is important, because we don't want to trigger hblank interrupts on line 88 to 110 for performance reason.
-          Finally, the function returns, as there is nothing else to do to handle the rocks layer.
-        </p>
-        <p>
-          The next interrupt occurs on line 111.
-          This is the line compare interrupt that has been set up in Listing 8.
-          That new line compare interrupt is handled by Listing 7, just like the first line compare interrupt.
-          The interrupt function basically enables the hblank interrupt and returns early.
-        </p>
-        <p>
-          The last interrupt is the hblank interrupt on line 111.
-          This time the function does not return early, and goes through the instructions shown in Listing 9.
-        </p>
-        <figure>
-          <pre class="asmlisting">
+      </figure>
+      <p>
+      The code checks if the interrupt occured on line 87 (<code>LINE_ROCKS</code>).
+      As this is the case in the hblank of line 87, the six instructions after the <code>jr</code> instruction are executed.
+      First, the <code>rSCX</code> register is updated with the scrolling value for the rocks.
+      Then, target line for the line compare interrupt is set to 111 (<code>LINE_GROUND</code>).
+      Next, the line compare interrupt is re-enabled, so that we get an line compare interrupt on line 111.
+      Note that the hblank interrupt is disabled here.
+      This is important, because we don't want to trigger hblank interrupts on line 88 to 110 for performance reason.
+      Finally, the function returns, as there is nothing else to do to handle the rocks layer.
+      </p>
+      <p>
+      The next interrupt occurs on line 111.
+      This is the line compare interrupt that has been set up in Listing 8.
+      That new line compare interrupt is handled by Listing 7, just like the first line compare interrupt.
+      The interrupt function basically enables the hblank interrupt and returns early.
+      </p>
+      <p>
+      The last interrupt is the hblank interrupt on line 111.
+      This time the function does not return early, and goes through the instructions shown in Listing 9.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 ld a, [rLY]
 cp a, LINE_ROCKS
 jr nz, .middle_section
@@ -433,74 +463,117 @@ ldh [rSTAT], a
 
 ret</pre>
         <figcaption>Listing 9: The code handling the line 111 hblank</figcaption>
-        <br/>
-        <p>
-          Because we are now on line 111, the <code>jr nz, .middle_section</code> does jump to the <code>.middle_section</code> label.
-          The instructions at the end of the function then get executed.
-          These instructions are very similar to those in Listing 8, with only two differences.
-          The first difference is that the <code>rSCX</code> register gets updated with the scrolling value for the ground.
-          The second difference is that the target line for the line compare interrupt is brought back to 87 (<code>LINE_GROUND</code>), which is to prepare for the next frame.
-        </p>
+      </figure>
+      <p>
+      Because we are now on line 111, the <code>jr nz, .middle_section</code> does jump to the <code>.middle_section</code> label.
+      The instructions at the end of the function then get executed.
+      These instructions are very similar to those in Listing 8, with only two differences.
+      The first difference is that the <code>rSCX</code> register gets updated with the scrolling value for the ground.
+      The second difference is that the target line for the line compare interrupt is brought back to 87 (<code>LINE_GROUND</code>), which is to prepare for the next frame.
+      </p>
 
-        <h5>Closing Comments</h5>
-        <p>
-          That's it for the hblank method.
-          It relies on the proper usage of the line compare and hblank interrupts to update the the <code>rSCX</code> register at key timings to create the parallax effect.
-          The advantage of this method is that it is well supported by the hardware.
-          The LCD interrupts make the code efficient, and we only need a handful of instructions and variables to implement the parallax.
-          You could easily had more layers, but remember that each additional layers will consume some cycles, so there will be less cycles left for the game logic.
-          The main drawback of the hblank method is that layers cannot overlap.
-          To get overlapping elements, you'd have to use sprites, with all the limitations they come with, such as the ten sprites limit per line.
-        </p>
+      <h5>Closing Comments</h5>
+      <p>
+      That's it for the hblank method.
+      It relies on the proper usage of the line compare and hblank interrupts to update the the <code>rSCX</code> register at key timings to create the parallax effect.
+      The advantage of this method is that it is well supported by the hardware.
+      The LCD interrupts make the code efficient, and we only need a handful of instructions and variables to implement the parallax.
+      You could easily had more layers, but remember that each additional layers will consume some cycles, so there will be less cycles left for the game logic.
+      The main drawback of the hblank method is that layers cannot overlap.
+      To get overlapping elements, you'd have to use sprites, with all the limitations they come with, such as the ten sprites limit per line.
+      </p>
 
       <h4>The Tile Method</h4>
-        <p>
-          The second parallax technique we'll study in this article is the <i>tile</i> method.
-          It is a completely different approach to parallax scrolling than the hblank method.
-          It comes with its own benefits and drawbacks, but it does not fail to create an impressive parallax effect.
-        </p>
-        <h5>Checking the Sample</h5>
-          <p>
-            Figure 4 is a short video of the tile sample.
-            The astronaut is back, but this time, he walks in a warehouse.
-          </p>
-          <figure>
-            <video autoplay loop muted preload="auto">
-              <source src="../video/parallax/tile.mp4" type="video/mp4">
-              Your browser does not support the video tag.
-            </video>
-          <figcaption>Figure 4: Parallax scrolling using the tile method</figcaption>
-          <p>
-            The ground and boxes are in the foreground and moves quickly as the astronaut walks around.
-            The wall in the foreground moves at a slower pace, which creates the parallax effect.
-            We have two layers of parallax, and the nice aspect of the tile method is that those layers can overlap.
-          </p>
+      <p>
+      The second parallax technique we'll study in this article is the <i>tile</i> method.
+      It is a completely different approach to parallax scrolling than the hblank method.
+      It comes with its own benefits and drawbacks, but it does not fail to create an impressive parallax effect.
+      </p>
+      <h5>Checking the Sample</h5>
+      <p>
+      Figure 4 is a short video of the tile sample.
+      The astronaut is back, but this time, he walks in a warehouse.
+      </p>
+      <figure>
+        <video autoplay loop muted preload="auto">
+          <source src="../video/parallax/tile.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        <figcaption>Figure 4: Parallax scrolling using the tile method</figcaption>
+      </figure>
+      <p>
+      The ground and boxes are in the foreground and moves quickly as the astronaut walks around.
+      The wall in the foreground moves at a slower pace, which creates the parallax effect.
+      We have two layers of parallax, and the nice aspect of the tile method is that those layers can overlap.
+      </p>
 
-        <h5>Understanding the Algorithm</h5>
-          <p>
-            To implement this tile method, we don't need to use any LCD interrupt, and we don't even need to change the value of the <code>rSCX</code> register during the LCD refresh.
-            The method entirely relies on designing tiles that can fake parallax and on transferring the right tiles every frame to VRAM.
-          </p>
-          <p>
-            First, we'll design a pattern of tiles that we want to scroll in the background.
-            Then, we'll create all the combinations of tiles we need to cover the scrolling of the background.
-            At runtime, we'll compute the combination of tiles we need to display during the next frame.
-            Finally, during the vblank, we'll copy over that combination of tiles to VRAM.
-          </p>
+      <h5>Understanding the Algorithm</h5>
+      <p>
+      To implement this tile method, we don't need to use any LCD interrupt, and we don't even need to change the value of the <code>rSCX</code> register during the LCD refresh.
+      The method entirely relies on designing tiles that can fake parallax and on transferring the right tiles every frame to VRAM.
+      </p>
+      <p>
+      First, we'll design a pattern of tiles that we want to scroll in the background.
+      Then, we'll create all the combinations of tiles we need to cover the scrolling of the background.
+      At runtime, we'll compute the combination of tiles we need to display during the next frame.
+      Finally, during the vblank, we'll copy over that combination of tiles to VRAM.
+      </p>
 
-        <h5>Diving into the Sample Code</h5>
-          <p>
-          </p>
+      <h5>Designing the pattern</h5>
+      <p>
+      Before we we jump into the sample's code, let's check how to author the tile pattern for the background.
+      For the sample, we use a 16x16 repeating pattern shown in Figure 5.
+      </p>
+      <figure>
+        <img src="../images/parallax/parallax_pattern.png" alt="Parallax pattern">
+        <figcaption>Figure 5: Parallax pattern</figcaption>
+      </figure>
+      <p>
+      For the tile parallax algorithm, we need all the horizontal combinations of this pattern.
+      As we use a 16-wide pattern, there are 16 such combinations.
+      Each combination is built upon the previous one, starting with the combination in Figure 5.
+      The rightmost column of pixels is copied to the left most position.
+      The other pixel columns are, in effect, all shifted one pixel to the right.
+      This is illustrated in Figure 6.
+      </p>
+      <figure>
+        <img src="../images/parallax/parallax_pattern_construction.png" alt="Parallax pattern construction">
+        <figcaption>Figure 6: Parallax pattern construction</figcaption>
+      </figure>
+      <p>
+      Following the arrows, the second pattern is built from the original pattern that we want to scroll.
+      We first knock out the rightmost column of pixel from the original pattern.
+      Then, we bring that column to the front of the other fifteen columns, scrolled one pixel to the right, to form a new pattern.
+      That new pattern can be used to create the third pattern, using the exact them step, and so on, until we have 16 patterns.
+      All the pattern are shown in Figure 7.
+      </p>
+      <figure>
+        <img src="../images/parallax/parallax_tiles.png" alt="Parallax tiles">
+        <figcaption>Figure 7: Parallax tiles</figcaption>
+      </figure>
+      <p>
+      Those patterns can then be exported, in order, and included in the ROM.
+      </p>
 
-        <figure>
-          <pre class="asmlisting">
+      <h5>Diving into the Sample Code</h5>
+      <p>
+      Let's dive into the code of the sample and see what it takes to implement a parallax effect using the tile method.
+      You can get the fully commented code at xxx.
+      There is also a prebuilt ROM available at xxx.
+      </p>
+      <p>
+      The samples uses a few constants, shown in Listing 10.
+      </p>
+      <figure>
+        <pre class="asmlisting">
 def BYTES_PER_TILE                  equ 16
 def WALL_TILE_COUNT                 equ 4
 
 def FOREGROUND_SPEED_X              equ $0100
 def BACKGROUND_SPEED_X              equ $0080</pre>
         <figcaption>Listing 10: xxx</figcaption>
-        <br/>
+        <p>
+        </p>
 
         <figure>
           <pre class="asmlisting">
@@ -508,8 +581,8 @@ def WRAM_FOREGROUND_X               rb 2
 def WRAM_BACKGROUND_X               rb 2
 
 def WRAM_WALL_STARTING_TILE_ADDRESS rb 2</pre>
-        <figcaption>Listing 11: xxx</figcaption>
-        <br/>
+          <figcaption>Listing 11: xxx</figcaption>
+        </figure>
 
         <figure>
           <pre class="asmlisting">
@@ -530,8 +603,8 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
     inc de
     dec c
     jr nz, .copy_wall_tiles</pre>
-        <figcaption>Listing xxx: xxx</figcaption>
-        <br/>
+          <figcaption>Listing xxx: xxx</figcaption>
+        </figure>
 
         <figure>
           <pre class="asmlisting">
@@ -549,8 +622,8 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
         u16_add WRAM_BACKGROUND_X, BACKGROUND_SPEED_X
     .direction_right
 .astronaut_move_done</pre>
-        <figcaption>Listing xxx: xxx</figcaption>
-        <br/>
+          <figcaption>Listing xxx: xxx</figcaption>
+        </figure>
 
         <figure>
           <pre class="asmlisting">
@@ -574,55 +647,47 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
     ld a, h
     ld [WRAM_WALL_STARTING_TILE_ADDRESS + 1], a
 .compute_wall_tile_address_done</pre>
-        <figcaption>Listing xxx: xxx</figcaption>
-        <br/>
+          <figcaption>Listing xxx: xxx</figcaption>
+        </figure>
 
         <h5>Closing Comments</h5>
-          <p>
-            That's it for the tile method.
-            At its core, it is all about copying the right tiles from ROM to VRAM each frame.
-            It creates a very convincing parallax effect by just swapping the tile graphics used for the background.
-            The benefit of the technique is that layers can overlap.
-            Another benefit is that the technique also allows for vertical parallax, such as those used in vertical shmups.
-            It is even possible to design parallax effects on both directions.
-            The main drawback is the amount of ROM space you need to dedicate to the tile combinations.
-            The ROM space budget can quickly balloon out of proportion as the tile pattern grows in size, or is allowed to scroll in both directions.
-            It is possible to update the tile indices in the tilemap (in addition to the tile graphics) to mitigate the ROM space consumption.
-            Another drawback is that the technique adds a lot of worload in the vblank, leaving less cycles for any other work, such as sprites or regular tile animation.
-            We'll see a technique using the stack to boost the speed of transfer speed on the DMG in a subsequent article.
-            On the CGB, it is possible to use DMA to make those transfers way faster.
-          </p>
-
-      <h4>Conclusion</h4>
         <p>
-          In this article, we covered two techniques to create parallax effects on the Game Boy.
-          You should now have a good grasp of how to implement both techniques.
-          You should also understand their benefits and drawbacks, and be able to choose the right technique for your games.
-          It is possible to mix both technique together too, and many commercial games did so.
-          This article presents the basis of both techniques, but it is always possible to tailor and improve upon these techniques to match your specific needs and create more impressive effects.
+        That's it for the tile method.
+        At its core, it is all about copying the right tiles from ROM to VRAM each frame.
+        It creates a very convincing parallax effect by just swapping the tile graphics used for the background.
+        The benefit of the technique is that layers can overlap.
+        Another benefit is that the technique also allows for vertical parallax, such as those used in vertical shmups.
+        It is even possible to design parallax effects on both directions.
+        The main drawback is the amount of ROM space you need to dedicate to the tile combinations.
+        The ROM space budget can quickly balloon out of proportion as the tile pattern grows in size, or is allowed to scroll in both directions.
+        It is possible to update the tile indices in the tilemap (in addition to the tile graphics) to mitigate the ROM space consumption.
+        Another drawback is that the technique adds a lot of worload in the vblank, leaving less cycles for any other work, such as sprites or regular tile animation.
+        We'll see a technique using the stack to boost the speed of transfer speed on the DMG in a subsequent article.
+        On the CGB, it is possible to use DMA to make those transfers way faster.
+        </p>
+
+        <h4>Conclusion</h4>
+        <p>
+        In this article, we covered two techniques to create parallax effects on the Game Boy.
+        You should now have a good grasp of how to implement both techniques.
+        You should also understand their benefits and drawbacks, and be able to choose the right technique for your games.
+        It is possible to mix both technique together too, and many commercial games did so.
+        This article presents the basis of both techniques, but it is always possible to tailor and improve upon these techniques to match your specific needs and create more impressive effects.
         </p>
         <p>
-          If the content of this article is a bit overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
-          It is a smoother introduction to basically everything there is to say about Game Boy programming.
+        One thing to keep in mind is to not make layers scroll too quickly.
+        The DMG LCD suffers from heavy ghosting, and the blurring of your art would waste the parallax effect.
+        </p>
+        <p>
+        If the content of this article is a bit overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
+        It is a smoother introduction to basically everything there is to say about Game Boy programming.
         <p>
 
-      <h4>Art Attribution</h4>
+        <h4>Art Attribution</h4>
         <p>
-          The backgrounds used in the samples are from <a href="https://rumblecade.itch.io/">Rumblecade</a>.
-          The astronaut is from <a href="https://dizabanik.itch.io/">Dizabanik Games</a>.
+        The backgrounds used in the samples are from <a href="https://rumblecade.itch.io/" target="_blank">Rumblecade</a>.
+        The astronaut is from <a href="https://dizabanik.itch.io/" target="_blank">Dizabanik Games</a>.
         </p>
-      <!--
-        Introduction
-          DMG, CGB definition
-          All tested on real hardware
-          Works in Game Boy Color
-          Note on ghosting
-              Rule of thumb to design tiles that scroll well (refer to games)
-          RGBDS toolchain
-        Using interrupts
-          Explain hblank
-          Explain line compare
-      -->
 
     </div>
 
