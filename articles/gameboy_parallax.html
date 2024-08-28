@@ -57,17 +57,13 @@
       <p>
       Then, we'll go over the two parallax techniques: the <i>hblank</i> method and the <i>tile</i> method.
       We'll show how to implement those techniques and explain their benefits and drawbacks.
-      We'll use assembly code samples to show all the implementation details.
-      However, the concepts presented in this article should also be relevant to games programmed in C,
-      and the techniques might be applicable to other consoles as well, such as the NES or Master System.
       </p>
       <p>
       By the end of the article, you'll have a strong grasp of what it takes to implement parallax scrolling on the Game Boy.
-      You'll also be able to choose the best parallax techniques for your game.
+      You'll also be able to choose the best parallax technique for your game.
       </p>
 
-      <h4>Introduction</h4>
-      <h5>What is Parallax Scrolling</h5>
+      <h4>Preamble</h4>
       <p>
       Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
       The effect of parallax scrolling is shown in Figure 1.
@@ -80,29 +76,62 @@
       </p>
       <p>
       What makes parallax scrolling challenging on the Game Boy is that the console only supports one single background layer.
-      So, we have to leverage the hardware capabilities to mimic the effect of having several background layers.
+      So, we have to leverage the hardware capabilities and use some tricks to mimic the effect of having several background layers.
       </p>
-
-      <h5>Target Audience</h5>
       <p>
-      Anyone interested in game development can grasp the concepts presented in this article.
-      However, you should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
+      We'll use code samples to show all the implementation details of the parallax techniques.
+      The fully commented source code for the samples is downloadable <a href="../samples/parallax.zip">here</a>.
+      There are also prebuilt ROMs available in the zip file so that you can run the sample without having to build them first.
+      The samples are written in assembly for the <a href="https://rgbds.gbdev.io/" target="_blank">RGBDS toolchain</a>.
+      They have been tested on both the BGB emulator and real hardware.
+      </p>
+      <p>
+      While the samples are made for the original Game Boy (DMG), the techniques used are relevant for the Game Boy Color (CGB) too.
+      The concepts presented in this article should also be suitable to games programmed in C, and the techniques might be applicable to other consoles as well, such as the NES and Master System.
+      </p>
+      <p>
+      You should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
       To get a strong introduction to Game Boy programming in assembly, I recommend you to check my book,
       <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.
-      It is a complete coverage of all the aspects the Game Boy, using a beginner-friendly approach for those new to assembly.
-      </p>
-
-      <h5>About the samples</h5>
-      <p>
-      The source code for the samples is available at xxx.
-      The source code is written in assembly for the <a href="https://rgbds.gbdev.io/" target="_blank">RGBDS toolchain</a>.
-      The samples have been tested no both the BGB emulator and real hardware.
-      While the samples are made for the original Game Boy (DMG), the techniques used also work on the Game Boy Color (CGB).
+      It is a complete coverage of all the aspects of programming the Game Boy, using a beginner-friendly approach for those new to assembly.
       </p>
 
       <h4>The Hblank Method</h4>
       <p>
       The first technique we'll study is the <i>hblank</i> method.
+      Figure 2 is a short video of the hblank sample.
+      It consists in an astronaut walking on a planet.
+      </p>
+      <figure>
+        <video autoplay loop muted preload="auto">
+          <source src="../video/parallax/hblank.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        <figcaption>Figure 2: Hblank method sample</figcaption>
+      </figure>
+      <p>
+      The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
+      </p>
+
+      <h5>Theory</h5>
+      <p>
+      To achieve the sample's parallax effect, the idea is to split the screen horizontally into three different layers.
+      The top layer contains the planets and stars.
+      The middle layer contains the rocks.
+      The bottom layer contains the ground on which the astronauts walks.
+      The layers are shown in Figure 3, with red lines separating them.
+      </p>
+      <figure>
+        <img src="../images/parallax/layers.png" alt="Parallax layers">
+        <figcaption>Figure 3: Parallax layers</figcaption>
+      </figure>
+      <p>
+      The sky layer extends from lines 0 to 87.
+      The rock spans lines 88 to 111.
+      The ground covers the remaining lines, from 112 to 143.
+      Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
+      </p>
+      <p>
       In my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, I go over two versions of hblank parallax:
       one <i>naive</i> implementation and one <i>optimized</i> implementation.
       The naive implementation uses the hblank interrupt exclusively to set the scrolling value.
@@ -120,7 +149,9 @@
 
       <h5>About Interrupts</h5>
       <p>
-      If you master interrupts on the DMG, you can skip that section.
+      If you master interrupts on the DMG, you can skip this section.
+      </p>
+      <p>
       The DMG has five types of interrupts.
       In a nutshell, an interrupt is a function that gets called when a particular hardware event occurs.
       The hblank method heavily uses the LCD interrupt.
@@ -137,37 +168,6 @@
       The hblank interrupt triggers at the end of each LCD line, from 0 to 143.
       The hblank interrupt is very important, because this is the only timing on a line when we have full access to the VRAM.
       The hblank is also known as <i>mode 00</i> and we'll use that term in this article from time to time.
-      </p>
-
-      <h5>Checking the Sample</h5>
-      <p>
-      Figure 2 is a short video of the hblank sample.
-      It consists in an astronaut walking on a planet.
-      </p>
-      <figure>
-        <video autoplay loop muted preload="auto">
-          <source src="../video/parallax/hblank.mp4" type="video/mp4">
-          Your browser does not support the video tag.
-        </video>
-        <figcaption>Figure 2: Parallax scrolling using the hblank method</figcaption>
-      </figure>
-      <p>
-      The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
-      To achieve this parallax effect, the idea is to split the screen horizontally into three different layers.
-      The top layer contains the planets and stars.
-      The middle layer contains the rocks.
-      The bottom layer contains the ground on which the astronauts walks.
-      The layers are shown in Figure 3, with red lines separating them.
-      </p>
-      <figure>
-        <img src="../images/parallax/layers.png" alt="Parallax layers">
-        <figcaption>Figure 3: Parallax layers</figcaption>
-      </figure>
-      <p>
-      The sky layer extends from lines 0 to 87.
-      The rock spans lines 88 to 111.
-      The ground covers the remaining lines, from 112 to 143.
-      Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
       </p>
 
       <h5>Understanding the Algorithm</h5>
@@ -191,8 +191,6 @@
       <p>
       In this section, we'll dive into the sample code.
       We'll see the most important details of the implementation.
-      You can get the fully commented code at xxx.
-      There is also a prebuilt ROM available at xxx.
       </p>
       <p>
       The sample declares several constants, as shown in Listing 1.
@@ -558,8 +556,6 @@ ret</pre>
       <h5>Diving into the Sample Code</h5>
       <p>
       Let's dive into the code of the sample and see what it takes to implement a parallax effect using the tile method.
-      You can get the fully commented code at xxx.
-      There is also a prebuilt ROM available at xxx.
       </p>
       <p>
       The samples uses a few constants, shown in Listing 10.
@@ -740,7 +736,7 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       The DMG LCD suffers from heavy ghosting, and the blurring of your art would waste the parallax effect.
       </p>
       <p>
-      If the content of this article is a bit overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
+      If the content of this article feels overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
       It is a smoother introduction to basically everything there is to say about Game Boy programming.
       <p>
 
