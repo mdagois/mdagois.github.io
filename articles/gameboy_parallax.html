@@ -43,7 +43,7 @@
     <div class="container">
       <br/>
       <p>
-      <img src="../images/gameboy.png" alt="gameboy" class="rounded mx-auto d-block">
+      <img src="../images/gameboy.png" class="rounded mx-auto d-block">
       </p>
 
       <h3>Parallax Scrolling on the Game Boy</h3>
@@ -61,20 +61,23 @@
       You'll also be able to choose the best parallax technique for your game.
       </p>
 
+      <hr/>
+
       <h4>Preamble</h4>
       <p>
       Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
       The effect of parallax scrolling is shown in Figure 1.
       <figure>
-        <img src="../images/parallax/parallax_scrolling.gif" alt="Parallax scrolling">
+        <img src="../images/parallax/parallax_scrolling.gif">
         <figcaption>Figure 1: Visualizing the parallax effect</figcaption>
       </figure>
       Graphics elements are placed on distinct layers that moves at different paces.
       The further away a layer is meant to be from the observer, the slower it moves.
+      For example, in Figure 1, the dark blue building moves faster than the light blue ones, because they are closer to the viewer.
       </p>
       <p>
       What makes parallax scrolling challenging on the Game Boy is that the console features only one single background layer with scrolling support.
-      In order to implement parallax scrolling, we have to leverage other hardware capabilities and use some tricks to mimic the effect of having several scrolling background layers.
+      In order to implement parallax scrolling, we have to leverage other hardware capabilities and use tricks to mimic the effect of having several scrolling background layers.
       </p>
       <p>
       This article uses code samples to show all the implementation details of the parallax techniques.
@@ -95,11 +98,13 @@
       It is a complete coverage of all the aspects of programming the Game Boy, using a beginner-friendly approach for those new to assembly.
       </p>
 
+      <hr/>
+
       <h4>The Hblank Method</h4>
       <p>
       The first technique we'll study is the <i>hblank</i> method.
       Figure 2 is a short video of the hblank sample.
-      It consists in an astronaut walking on a planet.
+      It consists in an astronaut walking on an alien planet.
       </p>
       <figure>
         <video autoplay loop muted preload="auto">
@@ -109,19 +114,15 @@
         <figcaption>Figure 2: Checking the hblank sample</figcaption>
       </figure>
       <p>
-      The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
-      </p>
-
-      <h5>Theory</h5>
-      <p>
-      To achieve the sample's parallax effect, the idea is to split the screen horizontally into three different layers.
+      The planets and stars appear to be at a distance, while the rocks appear farther away from us than the ground.
+      To achieve this parallax effect, the idea is to split the screen horizontally into three different layers.
       The top layer contains the planets and stars.
       The middle layer contains the rocks.
       The bottom layer contains the ground on which the astronauts walks.
-      The layers are shown in Figure 3, with red lines separating them.
+      The layers are highlighted with red lines in Figure 3.
       </p>
       <figure>
-        <img src="../images/parallax/layers.png" alt="Parallax layers">
+        <img src="../images/parallax/layers.png">
         <figcaption>Figure 3: Visualizing the parallax layers</figcaption>
       </figure>
       <p>
@@ -131,24 +132,35 @@
       Each layer is scrolled at a different pace when the astronaut walks around in order to create the parallax effect.
       </p>
       <p>
-      In my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, I go over two versions of hblank parallax:
+      For the sample, we use the background graphics shown in Figure 4.
+      </p>
+      <figure>
+        <img src="../images/parallax/moon.png">
+        <figcaption>Figure 4: Designing the background graphics</figcaption>
+      </figure>
+      <p>
+      For a basic parallax effect, like the one created in the sample, you can design the background just as you would design a regular background with no parallax.
+      Once you master the basic technique, you could design the three parallax layers separately, based on your game needs.
+      For example, you could have a complex set of ground layer chained together, while keeping the sky and rocks layers simple, as they will repeat fewer times due to their lower scrolling speed.
+      </p>
+      <p>
+      If you've read my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, you might remember that it introduces two versions of the hblank parallax effect:
       one <i>naive</i> implementation and one <i>optimized</i> implementation.
       The naive implementation uses the hblank interrupt exclusively to set the scrolling value.
-      The problem with this implementation is that we get interrupts on each line, even though we are only interested in two lines (87 and 111).
+      The problem with this implementation is that we get interrupts on each line, even though we only need to change the background scrolling on two lines: 87 and 111.
       This ends up wasting a lot of cycles that could be better used for actual game logic.
-      The optimized implementation fixed the performance issue of the naive implementation by using the line compare interrupt.
-      This was reducing the number of interrupts from 144 to 4 during the LCD refresh.
-      The only issue of the optimized implementation is that it would trigger the <code>rSTAT</code> bug.
+      The optimized implementation fixes the performance issue of the naive implementation by using the line compare interrupt.
+      This implementation reduces the number of interrupts from 144 to 4 during the LCD refresh.
+      The only issue of the optimized implementation is that it does trigger the <code>rSTAT</code> bug.
       The <code>rSTAT</code> bug is a nasty hardware issue that occurs on the original Game Boy.
       The bug causes spurious LCD interrupts to trigger when the <code>rSTAT</code> register is written to.
       In this article, we'll use a modified version of the optimized implementation.
       It has the benefit of avoiding the <code>rSTAT</code> bug by writing to the <code>rSTAT</code> register exclusively from inside the interrupt function.
       This makes it the best implementation of the three.
       </p>
-
-      <h5>About Interrupts</h5>
       <p>
-      If you master interrupts on the Game Boy, you can skip this section.
+      On the Game Boy, the horizontal scrolling of the background is controlled by the <code>rSCX</code> register.
+      We'll use the hblank interrupt to change the value of the <code>rSCX</code> register on lines 87 and 111.
       </p>
       <p>
       The Game Boy has five types of interrupts.
@@ -157,22 +169,18 @@
       This interrupt is a kind of umbrealla, configurable, interrupt.
       By umbrella, I mean it is actually linked to more than one hardware event, though all the events it covers are related to the LCD.
       By configurable, I mean that we can choose which hardware events will trigger the interrupt at any given time.
-      In essence, from the programmer perspective, the LCD interrupt is one function that will get called when a set of hardware events of our choosing occur.
-      </p>
-      <p>
-      For the hblank method, we'll use two type of LCD interrupts: the <i>line compare</i> interrupt and the <i>hblank</i> interrupt.
-      The line compare interrupt triggers at the start of any LCD line we choose.
-      They are 144 lines on the LCD, going from line 0 to line 143.
-      For example, if we choose line 100, the LCD interrupt function will get called when Game Boy starts drawing that line.
-      The hblank interrupt triggers at the end of each LCD line, from 0 to 143.
-      The hblank interrupt is very important, because this is the only timing on a line when we have full access to the VRAM.
+      In essence, from our perspective, the LCD interrupt is a function that gets called when a hardware event from a set of our choosing occur.
+      <br/>
+      For the hblank sample implementation, we'll use two type of LCD interrupts: the <i>line compare</i> interrupt and the <i>hblank</i> interrupt.
+      <br/>
+      The line compare interrupt triggers at the start of any of the 144 LCD lines we set as target (lines are numbered from 0 to 143).
+      For example, if we set the target line to 100, the LCD interrupt function gets called when Game Boy starts drawing that line.
+      <br/>
+      The hblank is a short period of time at the end of each line of the LCD.
+      It corresponds to a time when nothing is drawn to the screen.
+      It is very important to us, because we have full access to the VRAM and graphics-related registers during the duration of the hblank.
+      The hblank interrupt triggers at each hblank, 144 times per frame.
       The hblank is also known as <i>mode 00</i> and we'll use that term in this article from time to time.
-      </p>
-
-      <h5>Understanding the Algorithm</h5>
-      <p>
-      On the Game Boy, the horizontal scrolling of the background is controlled by the <code>rSCX</code> register.
-      We'll use the hblank interrupt to change the value of the <code>rSCX</code> register on lines 87 and 111.
       </p>
       <p>
       First, we'll compute the horizontal scrolling value for all three layers.
@@ -185,10 +193,8 @@
       This creates the parallax effect.
       We'll see that there are a few more details when we check the actual assembly code.
       </p>
-
-      <h5>Diving into the Sample Code</h5>
       <p>
-      In this section, we'll dive into the sample code.
+      Let's now dive into the sample code.
       We'll see the most important details of the implementation.
       </p>
       <p>
@@ -468,8 +474,6 @@ ret</pre>
       The first difference is that the <code>rSCX</code> register gets updated with the scrolling value for the ground.
       The second difference is that the target line for the line compare interrupt is brought back to 87 (<code>LINE_GROUND</code>), which is to prepare for the next frame.
       </p>
-
-      <h5>Closing Comments</h5>
       <p>
       That's it for the hblank method.
       It relies on the proper usage of the line compare and hblank interrupts to update the the <code>rSCX</code> register at key timings to create the parallax effect.
@@ -479,6 +483,7 @@ ret</pre>
       The main drawback of the hblank method is that layers cannot overlap.
       To get overlapping elements, you'd have to use sprites, with all the limitations they come with, such as the ten sprites limit per line.
       </p>
+      <hr/>
 
       <h4>The Tile Method</h4>
       <p>
@@ -486,9 +491,8 @@ ret</pre>
       It is a completely different approach to parallax scrolling than the hblank method.
       It comes with its own benefits and drawbacks, but it does not fail to create an impressive parallax effect.
       </p>
-      <h5>Checking the Sample</h5>
       <p>
-      Figure 4 is a short video of the tile sample.
+      Figure 5 is a short video of the tile sample.
       The astronaut is back, but this time, he walks in a warehouse.
       </p>
       <figure>
@@ -496,15 +500,13 @@ ret</pre>
           <source src="../video/parallax/tile.mp4" type="video/mp4">
           Your browser does not support the video tag.
         </video>
-        <figcaption>Figure 4: Checking the tile sample</figcaption>
+        <figcaption>Figure 5: Checking the tile sample</figcaption>
       </figure>
       <p>
       The ground and boxes are in the foreground and moves quickly as the astronaut walks around.
       The wall in the foreground moves at a slower pace, which creates the parallax effect.
       We have two layers of parallax, and the nice aspect of the tile method is that those layers can overlap.
       </p>
-
-      <h5>Understanding the Algorithm</h5>
       <p>
       To implement this tile method, we don't need to use any LCD interrupt, and we don't even need to change the value of the <code>rSCX</code> register during the LCD refresh.
       The method entirely relies on designing tiles that can fake parallax and on transferring the right tiles every frame to VRAM.
@@ -515,44 +517,40 @@ ret</pre>
       At runtime, we'll compute the combination of tiles we need to display during the next frame.
       Finally, during the vblank, we'll copy over that combination of tiles to VRAM.
       </p>
-
-      <h5>Designing the pattern</h5>
       <p>
       Before we we jump into the sample's code, let's check how to author the tile pattern for the background.
-      For the sample, we use a 16x16 repeating pattern shown in Figure 5.
+      For the sample, we use a 16x16 repeating pattern shown in Figure 6.
       </p>
       <figure>
-        <img src="../images/parallax/parallax_pattern.png" alt="Parallax pattern">
-        <figcaption>Figure 5: Designing the parallax base tile pattern (tile sample)</figcaption>
+        <img src="../images/parallax/parallax_pattern.png">
+        <figcaption>Figure 6: Designing the parallax base tile pattern (tile sample)</figcaption>
       </figure>
       <p>
       For the tile parallax algorithm, we need all the horizontal combinations of this pattern.
       As we use a 16-wide pattern, there are 16 such combinations.
-      Each combination is built upon the previous one, starting with the combination in Figure 5.
+      Each combination is built upon the previous one, starting with the combination in Figure 6.
       The rightmost column of pixels is copied to the left most position.
       The other pixel columns are, in effect, all shifted one pixel to the right.
-      This is illustrated in Figure 6.
+      This is illustrated in Figure 7.
       </p>
       <figure>
-        <img src="../images/parallax/parallax_pattern_construction.png" alt="Parallax pattern construction">
-        <figcaption>Figure 6: Constructing a parallax tile pattern (tile sample)</figcaption>
+        <img src="../images/parallax/parallax_pattern_construction.png">
+        <figcaption>Figure 7: Constructing a parallax tile pattern (tile sample)</figcaption>
       </figure>
       <p>
       Following the arrows, the second pattern is built from the original pattern that we want to scroll.
       We first knock out the rightmost column of pixel from the original pattern.
       Then, we bring that column to the front of the other fifteen columns, scrolled one pixel to the right, to form a new pattern.
       That new pattern can be used to create the third pattern, using the exact them step, and so on, until we have 16 patterns.
-      All the pattern are shown in Figure 7.
+      All the pattern are shown in Figure 8.
       </p>
       <figure>
-        <img src="../images/parallax/parallax_tiles.png" alt="Parallax tiles">
-        <figcaption>Figure 7: Visualizing all the tile patterns (tile sample)</figcaption>
+        <img src="../images/parallax/parallax_tiles.png">
+        <figcaption>Figure 8: Visualizing all the tile patterns (tile sample)</figcaption>
       </figure>
       <p>
       In the sample, those patterns are exported, in order, and included in the ROM.
       </p>
-
-      <h5>Diving into the Sample Code</h5>
       <p>
       Let's dive into the code of the sample and see what it takes to implement a parallax effect using the tile method.
       </p>
@@ -569,8 +567,8 @@ def BACKGROUND_COUNTER_SPEED_X      equ $0080</pre>
         <figcaption>Listing 10: Defining the constants (tile sample)</figcaption>
       </figure>
       <p>
-      The number of byte per tiles, <code>BYTES_PER_TILE</code> is not specific to this algorithm, but it is not declared anywhere, and we need it for formulas we'll see later in this section.
-      The <code>WALL_TILE_COUNT</code> constant correspond to the number of tiles in the pattern from Figure 5.
+      The number of byte per tiles, <code>BYTES_PER_TILE</code> is not specific to this algorithm, but it is not declared anywhere, and we need it for formulas we'll see later.
+      The <code>WALL_TILE_COUNT</code> constant correspond to the number of tiles in the pattern from Figure 6.
       The two remaining constants are the speed of the parallax layers.
       The <code>FOREGROUND_SPEED_X</code> variable applies to the foreground, which consists of the ground and the boxes.
       The <code>BACKGROUND_COUNTER_SPEED_X</code> variable is for the background, which correspond to the wall covered by the tile pattern.
@@ -695,18 +693,16 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       The source address computed earlier is first unpacked in the <code>hl</code> register.
       Then, 4 tiles, or 64 bytes (<code>BYTES_PER_TILE * WALL_TILE_COUNT</code>) of data, are copied to VRAM.
       The destination address in VRAM is <code>$8800</code>, because that's where the background pattern tiles are located in the sample.
-      You can verify the location of the pattern tiles with BGB's VRAM viewer, shown in Figure 8.
+      You can verify the location of the pattern tiles with BGB's VRAM viewer, shown in Figure 9.
       </p>
       <figure>
-        <img src="../images/parallax/vram_viewer.png" alt="Sample VRAM">
-        <figcaption>Figure 8: Visualizing the sample VRAM</figcaption>
+        <img src="../images/parallax/vram_viewer.png">
+        <figcaption>Figure 9: Visualizing the sample VRAM</figcaption>
       </figure>
       <p>
       The four pattern tiles are highlighted in red.
       Every frame, we update those four tiles with the tile combination that matches the desired position of the background layer.
       </p>
-
-      <h5>Closing Comments</h5>
       <p>
       That's it for the tile method.
       At its core, it is all about copying the right tiles from ROM to VRAM each frame.
@@ -721,6 +717,7 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       We'll see a technique using the stack to boost the speed of transfer speed on the Game Boy in a subsequent article.
       On the Game Boy Color, it is possible to use DMA to make those transfers way faster.
       </p>
+      <hr/>
 
       <h4>Conclusion</h4>
       <p>
@@ -738,6 +735,7 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       If the content of this article feels overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
       It is a smoother introduction to basically everything there is to say about Game Boy programming.
       <p>
+      <hr/>
 
       <h4>Art Attribution</h4>
       <p>
