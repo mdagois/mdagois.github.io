@@ -220,7 +220,7 @@ def GROUND_SPEED_X                  equ $0100</pre>
       </p>
       <p>
       The sample uses several variables to store the layers' scrolling values.
-      In the sample, all the variables are stored in WRAM, but you could also have them in HRAM and benefits from the <code>ldh</code> instruction.
+      In the sample, all the variables are stored in WRAM, but you could also put them in HRAM and benefit from the <code>ldh</code> instruction.
       The variables are shown in Listing 2.
       </p>
       <figure>
@@ -238,19 +238,19 @@ rsset _RAM
       </figure>
       <p>
       First, we have the three fixed-point numbers to hold the positions of each layer.
-      We'll see how these are updated soon.
+      We'll see how these get updated soon.
       Then, we have two <i>buffer</i> variables.
       These hold the values meant to be copied to the <code>rSCX</code> register during the hblank interrupts.
       Their values is basically equal to the high bytes of the corresponding positions.
-      For example, <code>WRAM_ROCKS_SCROLLING_X</code> will hold the high byte of <code>WRAM_ROCKS_POSITION_X</code>.
+      For example, <code>WRAM_ROCKS_SCROLLING_X</code> holds the high byte of <code>WRAM_ROCKS_POSITION_X</code>.
       The reason we don't use the positions' high byte directly is that we need to keep the scrolling values stable during the LCD refresh, at least until line 112.
-      Because the positions might get updated in the sample main loop before the interrupts are triggered, we need to copy their value to those buffer variables that are guaranteed to be stable through the LCD refresh.
+      Because the positions might get computed in the sample main loop before the interrupts get triggered, we need to copy their value to those buffer variables that are guaranteed to be stable through the LCD refresh.
       Note that we don't have a buffer variables for the sky.
       We'll see why that is when we check the vblank code.
-      All the WRAM variables will be cleared to zero at initialization time.
       </p>
       <p>
-      At initialization time, the sample sets the interrupts as shown in Listing 3.
+      At initialization time, all the WRAM variables are cleared to zero.
+      The sample also sets the interrupts as shown in Listing 3.
       </p>
       <figure>
         <pre class="asmlisting">
@@ -266,16 +266,15 @@ ei</pre>
         <figcaption>Listing 3: Initializing the interrupts (hblank sample)</figcaption>
       </figure>
       <p>
-      First, we set the target line, in the <code>rLYC</code> register, for the line compare interrupt to the value of the rocks line (<code>LINE_ROCKS</code>).
-      The target line will change through the frame, but at the start of every frame, it will always set back to <code>LINE_ROCKS</code>, because that's the first line on which we need to change the value of the <code>rSCX</code> register every frame.
+      First, we set the target line (<code>rLYC</code> register) for the line compare interrupt to the value of the rocks line (<code>LINE_ROCKS</code>).
+      The target line changes through the frame, but at the start of every frame, it is always set back to <code>LINE_ROCKS</code>, because that's the first line on which we need to change the value of the <code>rSCX</code> register to produce the parallax effect.
       Then, we raise the flag for the line compare interrupt in the <code>rSTAT</code> register.
       This is an essential step to enable the line compare interrupt, which is one type of LCD interrupt.
       Note that the hblank flag isn't raised yet in the <code>rSTAT</code> register.
       We don't want hblank interrupts to trigger on each line as it would waste cycles.
-      We'll raise the flag only when necessary.
+      We raise the hblank flag only when necessary.
       Finally, we enable both the vblank and LCD interrupts.
-      The vblank interrupt is essential for frame pacing, and we'll also use it to prepare for the line and hblank interrupts.
-      The LCD interrupt is an umbrella interrupt that encompass the the line compare and hblank interrupts, which we rely on to implement the parallax effect.
+      The vblank interrupt is essential for frame pacing, and we also use it each frame to prepare for the next line and hblank interrupts.
       </p>
       <p>
       During the LCD refresh, we compute the position of all the layers for the next frame, as shown in Listing 4.
@@ -304,7 +303,7 @@ ei</pre>
       <p>
       We add or subtract the speeds to the layer positions based on the direction the astronaut is walking to.
       The <code>u16_add</code> and <code>u16_sub</code> macros handle the fixed-point arithmetic.
-      You can check their code in the GitHub repository.
+      You can check their code in the zip file.
       </p>
       <p>
       The updated positions are used during the vblank to prepare for the interrupts.
@@ -369,11 +368,11 @@ LcdInterrupt:
       </figure>
       <p>
       This interrupt function is called four times per LCD refresh.
-      It is easier to understand the code by going through, in order, each interrupt that occur during the LCD refresh.
+      It is easier to understand the code by going through each interrupt that occur during the LCD refresh in order.
       </p>
       <p>
       The first interrupt to occur during the LCD refresh is the line compare interrupt on line 87, which we set up at initialization time.
-      While the interrupt occurs on line 87, we cannot set the <code>rSCX</code> register yet.
+      While the interrupt occurs on line 87, we cannot update the <code>rSCX</code> register yet.
       The value of the <code>rSCX</code> register is partially latched at the start of each line.
       On one hand, the line compare interrupt on line 87 is too early, because that lines belongs to the sky layer.
       On the other hand, the line compare interrupt on line 88 is too late, because the line would still use a part of the value of the sky scrolling. 
@@ -621,7 +620,7 @@ rsset _RAM
       <p>
       This code is very similar the code in the hblank sample.
       We add or subtract the speeds to the layer positions based on the direction the astronaut.
-      Again, you can check the code for the <code>u16_add</code> and <code>u16_sub</code> macros in the GitHub repository.
+      Again, you can check the code for the <code>u16_add</code> and <code>u16_sub</code> macros in the zip file.
       </p>
       <p>
       The computation of the <code></code> variable is shown in Listing 13.
