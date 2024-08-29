@@ -67,7 +67,7 @@
       The effect of parallax scrolling is shown in Figure 1.
       <figure>
         <img src="../images/parallax/parallax_scrolling.gif" alt="Parallax scrolling">
-        <figcaption>Figure 1: Parallax scrolling</figcaption>
+        <figcaption>Figure 1: Visualizing the parallax effect</figcaption>
       </figure>
       Graphics elements are placed on distinct layers that moves at different paces.
       The further away a layer is meant to be from the observer, the slower it moves.
@@ -106,7 +106,7 @@
           <source src="../video/parallax/hblank.mp4" type="video/mp4">
           Your browser does not support the video tag.
         </video>
-        <figcaption>Figure 2: Hblank method sample</figcaption>
+        <figcaption>Figure 2: Checking the hblank sample</figcaption>
       </figure>
       <p>
       The planets and stars appear to be at a great distance, while the rocks appear farther away than the ground.
@@ -122,7 +122,7 @@
       </p>
       <figure>
         <img src="../images/parallax/layers.png" alt="Parallax layers">
-        <figcaption>Figure 3: Parallax layers</figcaption>
+        <figcaption>Figure 3: Visualizing the parallax layers</figcaption>
       </figure>
       <p>
       The sky layer extends from lines 0 to 87.
@@ -202,7 +202,7 @@ def LINE_GROUND                     equ 111
 def SKY_SPEED_X                     equ $0040
 def ROCKS_SPEED_X                   equ $0080
 def GROUND_SPEED_X                  equ $0100</pre>
-        <figcaption>Listing 1: Constants declaration</figcaption>
+        <figcaption>Listing 1: Defining the constants (hblank sample)</figcaption>
       </figure>
       <p>
       First, we have two constants, <code>LINE_ROCKS</code> and <code>LINE_GROUND</code>, that define the lines on which we'll change the scrolling values for the rocks and ground respectively.
@@ -228,7 +228,7 @@ rsset _RAM
 
     def WRAM_ROCKS_SCROLLING_X          rb 1
     def WRAM_GROUND_SCROLLING_X         rb 1</pre>
-        <figcaption>Listing 2: Variables declaration</figcaption>
+        <figcaption>Listing 2: Declaring the variables (hblank sample)</figcaption>
       </figure>
       <p>
       First, we have the three fixed-point numbers to hold the positions of each layer.
@@ -257,7 +257,7 @@ ldh [rSTAT], a
 ld a, IEF_VBLANK | IEF_LCDC
 ld [rIE], a
 ei</pre>
-        <figcaption>Listing 3: Sample initialization</figcaption>
+        <figcaption>Listing 3: Initializing the interrupts (hblank sample)</figcaption>
       </figure>
       <p>
       First, we set the target line, in the <code>rLYC</code> register, for the line compare interrupt to the value of the rocks line (<code>LINE_ROCKS</code>).
@@ -293,7 +293,7 @@ ei</pre>
         u16_add WRAM_GROUND_POSITION_X, GROUND_SPEED_X
     .direction_right
 .astronaut_move_done</pre>
-        <figcaption>Listing 4: Layer positions update</figcaption>
+        <figcaption>Listing 4: Updating the layer positions (hblank sample)</figcaption>
       </figure>
       <p>
       We add or subtract the speeds to the layer positions based on the direction the astronaut is walking to.
@@ -313,7 +313,7 @@ ld a, [WRAM_ROCKS_POSITION_X + 1]
 ld [WRAM_ROCKS_SCROLLING_X], a
 ld a, [WRAM_GROUND_POSITION_X + 1]
 ld [WRAM_GROUND_SCROLLING_X], a</pre>
-        <figcaption>Listing 5: Scrolling update during vblank</figcaption>
+        <figcaption>Listing 5: Updating the scrolling values during vblank (hblank sample)</figcaption>
       </figure>
       <p>
       First, we update the <code>rSCX</code> register so that it has the sky scrolling value when the LCD refresh starts.
@@ -359,7 +359,7 @@ LcdInterrupt:
     ldh [rSTAT], a
 
     ret</pre>
-        <figcaption>Listing 6: The LCD interrupt function</figcaption>
+        <figcaption>Listing 6: Defining the LCD interrupt function (hblank sample)</figcaption>
       </figure>
       <p>
       This interrupt function is called four times per LCD refresh.
@@ -388,7 +388,7 @@ ld a, STATF_MODE00
 ldh [rSTAT], a
 
 ret z</pre>
-        <figcaption>Listing 7: The code handling the line compare interrupt</figcaption>
+        <figcaption>Listing 7: Handling the line compare interrupt (hblank sample)</figcaption>
       </figure>
       <p>
       The first two instructions checks if the hblank flag, also known as mode 00 flag, is set in the <code>rSTAT</code> register.
@@ -419,7 +419,7 @@ jr nz, .middle_section
 
     ret
 .middle_section</pre>
-        <figcaption>Listing 8: The code handling the line 87 hblank</figcaption>
+        <figcaption>Listing 8: Handling line 87's hblank (hblank sample)</figcaption>
       </figure>
       <p>
       The code checks if the interrupt occured on line 87 (<code>LINE_ROCKS</code>).
@@ -459,7 +459,7 @@ ld a, STATF_LYC
 ldh [rSTAT], a
 
 ret</pre>
-        <figcaption>Listing 9: The code handling the line 111 hblank</figcaption>
+        <figcaption>Listing 9: Handling line 111's hblank (hblank sample)</figcaption>
       </figure>
       <p>
       Because we are now on line 111, the <code>jr nz, .middle_section</code> does jump to the <code>.middle_section</code> label.
@@ -496,7 +496,7 @@ ret</pre>
           <source src="../video/parallax/tile.mp4" type="video/mp4">
           Your browser does not support the video tag.
         </video>
-        <figcaption>Figure 4: Parallax scrolling using the tile method</figcaption>
+        <figcaption>Figure 4: Checking the tile sample</figcaption>
       </figure>
       <p>
       The ground and boxes are in the foreground and moves quickly as the astronaut walks around.
@@ -523,7 +523,7 @@ ret</pre>
       </p>
       <figure>
         <img src="../images/parallax/parallax_pattern.png" alt="Parallax pattern">
-        <figcaption>Figure 5: Parallax pattern</figcaption>
+        <figcaption>Figure 5: Designing the parallax base tile pattern (tile sample)</figcaption>
       </figure>
       <p>
       For the tile parallax algorithm, we need all the horizontal combinations of this pattern.
@@ -535,7 +535,7 @@ ret</pre>
       </p>
       <figure>
         <img src="../images/parallax/parallax_pattern_construction.png" alt="Parallax pattern construction">
-        <figcaption>Figure 6: Parallax pattern construction</figcaption>
+        <figcaption>Figure 6: Constructing a parallax tile pattern (tile sample)</figcaption>
       </figure>
       <p>
       Following the arrows, the second pattern is built from the original pattern that we want to scroll.
@@ -546,7 +546,7 @@ ret</pre>
       </p>
       <figure>
         <img src="../images/parallax/parallax_tiles.png" alt="Parallax tiles">
-        <figcaption>Figure 7: Parallax tiles</figcaption>
+        <figcaption>Figure 7: Visualizing all the tile patterns (tile sample)</figcaption>
       </figure>
       <p>
       In the sample, those patterns are exported, in order, and included in the ROM.
@@ -566,7 +566,7 @@ def WALL_TILE_COUNT                 equ 4
 
 def FOREGROUND_SPEED_X              equ $0100
 def BACKGROUND_COUNTER_SPEED_X      equ $0080</pre>
-        <figcaption>Listing 10: Constants from the tile parallax sample</figcaption>
+        <figcaption>Listing 10: Defining the constants (tile sample)</figcaption>
       </figure>
       <p>
       The number of byte per tiles, <code>BYTES_PER_TILE</code> is not specific to this algorithm, but it is not declared anywhere, and we need it for formulas we'll see later in this section.
@@ -594,7 +594,7 @@ rsset _RAM
     def WRAM_BACKGROUND_POSITION_X      rb 2
 
     def WRAM_WALL_STARTING_TILE_ADDRESS rb 2</pre>
-        <figcaption>Listing 11: Variables from the tile parallax sample</figcaption>
+        <figcaption>Listing 11: Declaring the variables (tile sample)</figcaption>
       </figure>
       <p>
       The first two variables are 16-bit numbers used to track the positions of both layers.
@@ -618,7 +618,7 @@ rsset _RAM
         u16_add WRAM_BACKGROUND_POSITION_X, BACKGROUND_COUNTER_SPEED_X
     .direction_right
 .astronaut_move_done</pre>
-        <figcaption>Listing 12: Computation of the layer positions</figcaption>
+        <figcaption>Listing 12: Updating the layer positions (tile sample)</figcaption>
       </figure>
       <p>
       This code is very similar the code in the hblank sample.
@@ -648,7 +648,7 @@ rsset _RAM
     ld a, h
     ld [WRAM_WALL_STARTING_TILE_ADDRESS + 1], a
 .compute_wall_tile_address_done</pre>
-        <figcaption>Listing 13: Computation of the background tiles' starting address</figcaption>
+        <figcaption>Listing 13: Computing the background tiles' starting address (tile sample)</figcaption>
       </figure>
       <p>
       The first two instructions compute the index of the tile combination we need for the next frame from the position of the background layer.
@@ -687,7 +687,7 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
     inc de
     dec c
     jr nz, .copy_wall_tiles</pre>
-        <figcaption>Listing 14: Vblank operations</figcaption>
+        <figcaption>Listing 14: Updating the background scrolling and VRAM tiles (tile sample)</figcaption>
       </figure>
       <p>
       During the vblank, the <code>rSCX</code> register is updated to reflect the movement of the foreground.
@@ -699,7 +699,7 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       </p>
       <figure>
         <img src="../images/parallax/vram_viewer.png" alt="Sample VRAM">
-        <figcaption>Figure 8: Sample VRAM</figcaption>
+        <figcaption>Figure 8: Visualizing the sample VRAM</figcaption>
       </figure>
       <p>
       The four pattern tiles are highlighted in red.
