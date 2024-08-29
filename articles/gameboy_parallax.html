@@ -508,18 +508,18 @@ ret</pre>
       We have two layers of parallax, and the nice aspect of the tile method is that those layers can overlap.
       </p>
       <p>
-      To implement this tile method, we don't need to use any LCD interrupt, and we don't even need to change the value of the <code>rSCX</code> register during the LCD refresh.
+      To implement the tile method, we don't need to use any LCD interrupt, and we don't even need to change the value of the <code>rSCX</code> register during the LCD refresh.
       The method entirely relies on designing tiles that can fake parallax and on transferring the right tiles every frame to VRAM.
       </p>
       <p>
-      First, we'll design a pattern of tiles that we want to scroll in the background.
-      Then, we'll create all the combinations of tiles we need to cover the scrolling of the background.
-      At runtime, we'll compute the combination of tiles we need to display during the next frame.
-      Finally, during the vblank, we'll copy over that combination of tiles to VRAM.
+      First, we design a pattern of tiles that we want to scroll in the background.
+      Then, we create all the combinations of tiles we need to cover the scrolling of the background.
+      At runtime, we compute the combination of tiles we need to display during the next frame.
+      Finally, during the vblank, we copy over that combination of tiles to VRAM.
       </p>
       <p>
-      Before we we jump into the sample's code, let's check how to author the tile pattern for the background.
-      For the sample, we use a 16x16 repeating pattern shown in Figure 6.
+      Before we jump into the sample's code, let's check how to author the tile pattern for the background.
+      For the sample, we use the 16x16 repeating pattern shown in Figure 6.
       </p>
       <figure>
         <img src="../images/parallax/parallax_pattern.png">
@@ -531,7 +531,7 @@ ret</pre>
       Each combination is built upon the previous one, starting with the combination in Figure 6.
       The rightmost column of pixels is copied to the left most position.
       The other pixel columns are, in effect, all shifted one pixel to the right.
-      This is illustrated in Figure 7.
+      The process to generate the second tile pattern is illustrated in Figure 7.
       </p>
       <figure>
         <img src="../images/parallax/parallax_pattern_construction.png">
@@ -541,8 +541,8 @@ ret</pre>
       Following the arrows, the second pattern is built from the original pattern that we want to scroll.
       We first knock out the rightmost column of pixel from the original pattern.
       Then, we bring that column to the front of the other fifteen columns, scrolled one pixel to the right, to form a new pattern.
-      That new pattern can be used to create the third pattern, using the exact them step, and so on, until we have 16 patterns.
-      All the pattern are shown in Figure 8.
+      The second pattern is then used to create the third pattern, using the exact them step, and so on, until we have 16 patterns.
+      Figure 8 shows all the 16 patterns used in the sample.
       </p>
       <figure>
         <img src="../images/parallax/parallax_tiles.png">
@@ -553,8 +553,6 @@ ret</pre>
       </p>
       <p>
       Let's dive into the code of the sample and see what it takes to implement a parallax effect using the tile method.
-      </p>
-      <p>
       The samples uses a few constants, shown in Listing 10.
       </p>
       <figure>
@@ -567,7 +565,7 @@ def BACKGROUND_COUNTER_SPEED_X      equ $0080</pre>
         <figcaption>Listing 10: Defining the constants (tile sample)</figcaption>
       </figure>
       <p>
-      The number of byte per tiles, <code>BYTES_PER_TILE</code> is not specific to this algorithm, but it is not declared anywhere, and we need it for formulas we'll see later.
+      The number of byte per tiles, <code>BYTES_PER_TILE</code> is not specific to this algorithm, but it is not declared anywhere else, and we need it for formulas we'll see later.
       The <code>WALL_TILE_COUNT</code> constant correspond to the number of tiles in the pattern from Figure 6.
       The two remaining constants are the speed of the parallax layers.
       The <code>FOREGROUND_SPEED_X</code> variable applies to the foreground, which consists of the ground and the boxes.
@@ -598,7 +596,7 @@ rsset _RAM
       The first two variables are 16-bit numbers used to track the positions of both layers.
       Like in the hblank parallax sample, these are fixed-point numbers with their high byte dedicated to the integral part of the number.
       The <code>WRAM_WALL_STARTING_TILE_ADDRESS</code> variable holds the starting ROM address of the tiles we need to transfer to VRAM to create the parallax effect of the background.
-      We'll see how all these variables are computed next, starting with the layer positions in Listing 12.
+      Let's see how all these variables are computed next, starting with the layer positions in Listing 12.
       </p>
       <figure>
         <pre class="asmlisting">
@@ -624,7 +622,7 @@ rsset _RAM
       Again, you can check the code for the <code>u16_add</code> and <code>u16_sub</code> macros in the zip file.
       </p>
       <p>
-      The computation of the <code></code> variable is shown in Listing 13.
+      The computation of the <code>WRAM_WALL_STARTING_TILE_ADDRESS</code> variable is shown in Listing 13.
       </p>
       <figure>
         <pre class="asmlisting">
@@ -656,8 +654,8 @@ rsset _RAM
       The next set of five instructions computes the offset of the tile combination in memory.
       All these instructions are basically a multiplication by 64, because we have 16 bytes per tile and 4 tiles per tile combination.
       The <code>swap a</code> instruction is an efficient way to multiply by 16.
-      The multiplied number must be below 15, which is the case here.
-      The number is then put in the <code>hl</code> register and added to itself twice, which is equivalent to multiplying by 4.
+      The multiplied number must be below 15, which is guaranteed to be the case here, because of the module 16 applied above.
+      The number is then put in the <code>hl</code> register and added to itself twice, which is equivalent to multiplying it by 4.
       At the end of those instruction, we do have the desired offset in the <code>hl</code> register.
       </p>
       <p>
@@ -702,6 +700,7 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       <p>
       The four pattern tiles are highlighted in red.
       Every frame, we update those four tiles with the tile combination that matches the desired position of the background layer.
+      This update creates the parallax effect.
       </p>
       <p>
       That's it for the tile method.
@@ -709,12 +708,11 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       It creates a very convincing parallax effect by just swapping the tile graphics used for the background.
       The benefit of the technique is that layers can overlap.
       Another benefit is that the technique also allows for vertical parallax, such as those used in vertical shmups.
-      It is even possible to design parallax effects on both directions.
+      It is even possible to design parallax effects in both directions.
       The main drawback is the amount of ROM space you need to dedicate to the tile combinations.
       The ROM space budget can quickly balloon out of proportion as the tile pattern grows in size, or is allowed to scroll in both directions.
-      It is possible to update the tile indices in the tilemap (in addition to the tile graphics) to mitigate the ROM space consumption.
-      Another drawback is that the technique adds a lot of worload in the vblank, leaving less cycles for any other work, such as sprites or regular tile animation.
-      We'll see a technique using the stack to boost the speed of transfer speed on the Game Boy in a subsequent article.
+      It is possible to update the tile indices in the tilemap (in addition to the tile graphics) to mitigate the ROM space consumption, but that requires more complex code.
+      Another drawback is that the technique adds a lot of worload in the vblank, leaving less cycles for any other work, such as sprites or tile animation.
       On the Game Boy Color, it is possible to use DMA to make those transfers way faster.
       </p>
       <hr/>
@@ -725,15 +723,17 @@ ld c, BYTES_PER_TILE * WALL_TILE_COUNT
       You should now have a good grasp of how to implement both techniques.
       You should also understand their benefits and drawbacks, and be able to choose the right technique for your games.
       It is possible to mix both technique together too, and many commercial games did so.
-      This article presents the basis of both techniques, but it is always possible to tailor and improve upon these techniques to match your specific needs and create more impressive effects.
       </p>
       <p>
-      One thing to keep in mind is to not make layers scroll too quickly.
+      This article introduced the basis of both techniques, but it is always possible to tailor and improve upon these techniques to match your specific needs and create more impressive effects.
+      </p>
+      <p>
+      One thing to keep in mind is to not make any layer scroll too quickly.
       The Game Boy LCD suffers from heavy ghosting, and the blurring of your art would waste the parallax effect.
       </p>
       <p>
       If the content of this article feels overwhelming, you might want to check my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>.
-      It is a smoother introduction to basically everything there is to say about Game Boy programming.
+      It is a smooth introduction to basically everything there is to say about Game Boy programming.
       <p>
       <hr/>
 
