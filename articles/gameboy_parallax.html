@@ -379,9 +379,9 @@ LcdInterrupt:
       As a consequence, the only place where it is correct to change the value of the <code>rSCX</code> register is the hblank of line 87.
       </p>
       <p>
-      The block formed by the first five instructions in the interrupt function have a dual purpose.
+      The block formed by the first five instructions in the interrupt function has a dual purpose.
       First, it enables the hblank interrupt, also knows as <i>mode 00</i> interrupt.
-      Second, it returns early if we are in the hblank yet.
+      Second, it returns early if we are not in the hblank yet.
       The relevant instructions from the interrupt function are shown in Listing 7.
       </p>
       <figure>
@@ -399,14 +399,14 @@ ret z</pre>
       The first two instructions checks if the hblank flag, also known as mode 00 flag, is set in the <code>rSTAT</code> register.
       If the mode 00 flag is clear, then the zero flag gets raised.
       Otherwise, the zero flag gets cleared.
-      In the case of the line compare interrupt on line 87, the flag gets cleared, because we are not in the hblank yet (the line compare interrupt happens at the start of the line).
+      In the case of the line compare interrupt on line 87, the flag gets cleared, because we are not in the hblank yet (the line compare interrupt happens at the start of the line, while the hblank happens at the end).
       The next two instructions enable the hblank interrupt, so that an interrupt triggers at the end of the line.
-      The last instruction returns early, because we are not yet in a hblank interrupt, so the zero flag was cleared by the <code>bit</code> instruction.
+      The last instruction returns early, because we are not yet in a hblank interrupt, which means the zero flag has been cleared by the <code>bit</code> instruction.
       </p>
       <p>
       The next interrupt to trigger is the hblank interrupt on line 87.
       The execution go through the same exact first five instructions, but the function does not return early this time, because the hblank flag is up in the <code>rSTAT</code> register.
-      The code additionally executes the instructions in the Listing 8.
+      The CPU additionally executes the instructions in the Listing 8.
       </p>
       <figure>
         <pre class="asmlisting">
@@ -428,22 +428,22 @@ jr nz, .middle_section
       </figure>
       <p>
       The code checks if the interrupt occured on line 87 (<code>LINE_ROCKS</code>).
-      As this is the case in the hblank of line 87, the six instructions after the <code>jr</code> instruction are executed.
+      As this is the case in the hblank of line 87, the six instructions right after the <code>jr</code> instruction get executed.
       First, the <code>rSCX</code> register is updated with the scrolling value for the rocks.
-      Then, target line for the line compare interrupt is set to 111 (<code>LINE_GROUND</code>).
+      Then, the target line for the line compare interrupt is set to 111 (<code>LINE_GROUND</code>).
       Next, the line compare interrupt is re-enabled, so that we get an line compare interrupt on line 111.
       Note that the hblank interrupt is disabled here.
-      This is important, because we don't want to trigger hblank interrupts on line 88 to 110 for performance reason.
+      This is important, because we don't want to trigger hblank interrupts on line 88 to 110 for performance reasons.
       Finally, the function returns, as there is nothing else to do to handle the rocks layer.
       </p>
       <p>
       The next interrupt occurs on line 111.
       This is the line compare interrupt that has been set up in Listing 8.
-      That new line compare interrupt is handled by Listing 7, just like the first line compare interrupt.
+      That new line compare interrupt is handled by the code in Listing 7, just like the first line compare interrupt.
       The interrupt function basically enables the hblank interrupt and returns early.
       </p>
       <p>
-      The last interrupt is the hblank interrupt on line 111.
+      The last interrupt of the frame is the hblank interrupt on line 111.
       This time the function does not return early, and goes through the instructions shown in Listing 9.
       </p>
       <figure>
@@ -471,14 +471,15 @@ ret</pre>
       The instructions at the end of the function then get executed.
       These instructions are very similar to those in Listing 8, with only two differences.
       The first difference is that the <code>rSCX</code> register gets updated with the scrolling value for the ground.
-      The second difference is that the target line for the line compare interrupt is brought back to 87 (<code>LINE_GROUND</code>), which is to prepare for the next frame.
+      The second difference is that the target line for the line compare interrupt is brought back to 87 (<code>LINE_GROUND</code>), to prepare for the next frame.
+      All subsequent frames will go through the same series of updates and interrupts.
       </p>
       <p>
-      That's it for the hblank method.
-      It relies on the proper usage of the line compare and hblank interrupts to update the the <code>rSCX</code> register at key timings to create the parallax effect.
+      And that's it for the hblank method.
+      It relies on the proper usage of the line compare and hblank interrupts to update the <code>rSCX</code> register at key times during the frame to create the parallax effect.
       The advantage of this method is that it is well supported by the hardware.
       The LCD interrupts make the code efficient, and we only need a handful of instructions and variables to implement the parallax.
-      You could easily had more layers, but remember that each additional layers will consume some cycles, so there will be less cycles left for the game logic.
+      You could easily add more layers, but remember that each additional layers will consume some cycles (for the variable updates and additional interrupts), so there will be less cycles left for the game logic.
       The main drawback of the hblank method is that layers cannot overlap.
       To get overlapping elements, you'd have to use sprites, with all the limitations they come with, such as the ten sprites limit per line.
       </p>
