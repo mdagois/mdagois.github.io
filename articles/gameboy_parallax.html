@@ -49,16 +49,9 @@
       <h3>Parallax Scrolling on the Game Boy</h3>
       <p>
       This article is an in-depth guide to implementing parallax scrolling on the Game Boy.
-      It presents two techniques that you can use to add parallax scrolling to your Game Boy games.
-      </p>
-      <p>
       We'll start by reviewing what parallax scrolling is, and what the challenges are to implement this effect on the Game Boy.
-      Then, we'll go over two parallax techniques: the <i>hblank</i> method and the <i>tile</i> method.
-      We'll see how to implement those techniques and explain their benefits and drawbacks.
-      </p>
-      <p>
-      By the end of the article, you'll have a strong grasp of what it takes to implement parallax scrolling on the Game Boy.
-      You'll also be able to choose the best parallax technique for your game.
+      Then, we'll go over the implementations of two parallax techniques, the <i>hblank</i> method and the <i>tile</i> method, explaining their respective benefits and drawbacks.
+      By the end of the article, you'll have a strong grasp of what it takes to add parallax scrolling to your Game Boy games.
       </p>
 
       <hr/>
@@ -66,36 +59,38 @@
       <h4>Preamble</h4>
       <p>
       Parallax scrolling is a graphics technique used to create the illusion of depth with 2D graphics.
-      The effect of parallax scrolling is shown in Figure 1.
+      An example of parallax scrolling is shown in Figure 1.
       <figure>
         <img src="../images/parallax/parallax_scrolling.gif">
         <figcaption>Figure 1: Visualizing the parallax effect</figcaption>
       </figure>
-      Graphics elements are placed on distinct layers that moves at different paces.
-      The further away a layer is meant to be from the observer, the slower it moves.
-      For example, in Figure 1, the dark blue building moves faster than the light blue ones, because they are closer to the viewer.
+      Buildings are placed on distinct <i>layers</i> that move at different paces.
+      There are three layers in Figure 1, each with a different shade of blue.
+      The closer a layer is meant to be from the viewer, the faster it moves.
+      Inversely, layers that are farther away move slower.
+      This difference in pace between the layers creates the parallax effect.
       </p>
       <p>
-      What makes parallax scrolling challenging on the Game Boy is that the console features only one single background layer with scrolling support.
-      In order to implement parallax scrolling, we have to leverage other hardware capabilities and use tricks to mimic the effect of having several scrolling background layers.
+      The main challenge when implementing parallax scrolling on the Game Boy is that the console only features one single layer with scrolling support.
+      In order to implement parallax scrolling, we have to leverage other hardware capabilities and use tricks to mimic the effect of having several scrolling layers.
       </p>
       <p>
-      This article uses code samples to show all the implementation details of the parallax techniques.
-      You can download a zip file containing the fully commented source code for the samples <a href="../samples/parallax.zip">here</a>.
-      The zip file also includes prebuilt ROMs so that you can run the samples without having to build them first.
+      This article uses code snippets to illustrate the implementation of the two parallax techniques.
+      The full commented source code for the samples is available on <a href="https://github.com/mdagois/mdagois.github.io/tree/main/samples/parallax">GitHub</a>.
+      You will also find prebuilt ROMs there, so that you can run the samples without having to build them first.
+      The ROMs have been tested on both the BGB emulator and real hardware.
+      </p>
+      <p>
       The samples are written in assembly for the <a href="https://rgbds.gbdev.io/" target="_blank">RGBDS toolchain</a>.
-      They have been tested on both the BGB emulator and real hardware.
-      </p>
-      <p>
-      While the samples are made for the original Game Boy, the techniques used are relevant for the Game Boy Color too.
-      The concepts introduced in this article should also be suitable to games programmed in C.
-      The techniques presented might be applicable to other consoles as well, such as the NES and Master System.
-      </p>
-      <p>
       You should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
       To get a strong introduction to Game Boy programming in assembly, I recommend you to check my book,
       <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">Game Boy Coding Adventure</a>.
       It is a complete coverage of all the aspects of programming the Game Boy, using a beginner-friendly approach for those new to assembly.
+      </p>
+      <p>
+      While the samples are made for the original Game Boy, the techniques they use are relevant to the Game Boy Color too.
+      The concepts introduced in this article should also be suitable to games programmed in C.
+      The techniques presented might be applicable to other consoles as well, such as the NES and Master System.
       </p>
 
       <hr/>
