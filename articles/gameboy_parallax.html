@@ -139,6 +139,50 @@
       For example, you could have a complex set of ground layers chained together, as the ground will very likely impact the gameplay, while keeping the sky and rocks layers simple, as they will repeat fewer times due to their lower scrolling speed.
       </p>
       <p>
+      Before we dive into the sample code, let's check the basic algorithm used by the hblank method, and review the hardware features we'll need to implement it.
+      </p>
+      <p>
+      The algorithm consists of roughly four steps, repeated each frame.
+      First, we'll start by computing the horizontal scrolling values for all three layers (sky, rocks, and ground), based on the movement of the astronaut.
+      Second, during the vblank, we'll set the scrolling value of the background layer to that of the sky, as this is the first layer to be drawn to the LCD.
+      Third, when the LCD refresh reaches the end of line 87, we'll update the scrolling value of the background layer to that of the rocks, as the rocks layer start on line 88.
+      Finally, when the LCD refresh reaches the end of line 111, we'll update the scrolling value again for the ground layer, as that layer starts at line 112.
+      As each layer has its own scrolling value, this algorithm will create a parallax effect.
+      </p>
+      <p>
+      On the Game Boy, the horizontal scrolling of the background is controlled by the <code>rSCX</code> register.
+      As mentioned in the algorithm, we'll change the value of that register at very specific times during the frame: the vblank, the end of line 87, and the end of line 111.
+      We'll use interrupts to properly time the execution of any code modifying the <code>rSCX</code> register.
+      </p>
+      <p>
+      The Game Boy has five types of interrupts: vblank, LCD, timer, serial, and joypad.
+      In a nutshell, an interrupt is a function that gets called when a particular hardware event occurs.
+      In the sample, we'll leverage the vblank and LCD interrupts, and ignore the other three.
+      </p>
+      <p>
+      The vblank interrupt triggers when the <i>vertical blanking period (vblank)</i> starts.
+      The vblank is the period of time between the last line of a frame and the first line of the next frame.
+      Nothing is drawn to the LCD during the vblank, which makes it the perfect place to change graphics-related registers that affect the refresh of the LCD.
+      </p>
+      <p>
+      The LCD interrupt is a kind of umbrella, configurable, interrupt.
+      By umbrella, I mean it is actually linked to more than one hardware event, though all the events it covers are related to the LCD.
+      By configurable, I mean that we can choose which hardware events will trigger the LCD interrupt at any given time.
+      For the hblank sample implementation, we'll use two type of LCD interrupts: the <i>line compare</i> interrupt and the <i>hblank</i> interrupt.
+      </p>
+      <p>
+      The line compare interrupt triggers at the start of the LCD line we set as target.
+      It does not trigger for lines that are different from the target line.
+      For example, if we set the target line to 100, the LCD interrupt function gets called right before the Game Boy starts drawing that line, and not for any other line.
+      It is an important interrupt for us, as we want to execute code on particular lines.
+      </p>
+      <p>
+      The hblank interrupt triggers when a <i>horizontal blanking period (hblank)</i> starts.
+      The hblank is a short period of time at the end of each of the 144 line of the LCD.
+      During the hblank, nothing is drawn to the screen, and, more importantly, we get full access to the VRAM and graphics-related registers.
+      The hblank is also known as <i>mode 00</i> and we'll use that term in this article from time to time.
+      </p>
+      <p>
       If you've read my <a href="https://mdagois.gumroad.com/l/CODQn" target="_blank">book</a>, you might remember that it introduces two versions of the hblank parallax effect:
       one <i>naive</i> implementation and one <i>optimized</i> implementation.
       The naive implementation uses the hblank interrupt exclusively to set the scrolling value.
@@ -149,48 +193,12 @@
       The only issue of the optimized implementation is that it does trigger the <code>rSTAT</code> bug.
       The <code>rSTAT</code> bug is a nasty hardware issue that occurs on the original Game Boy.
       The bug causes spurious LCD interrupts to trigger when the <code>rSTAT</code> register is written to.
-      In this article, we'll use a modified version of the optimized implementation.
-      It has the benefit of avoiding the <code>rSTAT</code> bug by writing to the <code>rSTAT</code> register exclusively from inside the interrupt function.
+      In this article, we'll use a modified version of the optimized implementation, which has the benefit of avoiding the <code>rSTAT</code> bug by writing to the <code>rSTAT</code> register exclusively from inside the interrupt function.
       This makes it the best implementation of the three.
       </p>
       <p>
-      On the Game Boy, the horizontal scrolling of the background is controlled by the <code>rSCX</code> register.
-      We'll use the hblank interrupt to change the value of the <code>rSCX</code> register on lines 87 and 111.
-      </p>
-      <p>
-      The Game Boy has five types of interrupts.
-      In a nutshell, an interrupt is a function that gets called when a particular hardware event occurs.
-      The hblank method heavily uses the LCD interrupt.
-      This interrupt is a kind of umbrealla, configurable, interrupt.
-      By umbrella, I mean it is actually linked to more than one hardware event, though all the events it covers are related to the LCD.
-      By configurable, I mean that we can choose which hardware events will trigger the interrupt at any given time.
-      In essence, from our perspective, the LCD interrupt is a function that gets called when a hardware event from a set of our choosing occur.
-      <br/>
-      For the hblank sample implementation, we'll use two type of LCD interrupts: the <i>line compare</i> interrupt and the <i>hblank</i> interrupt.
-      <br/>
-      The line compare interrupt triggers at the start of any of the 144 LCD lines we set as target (lines are numbered from 0 to 143).
-      For example, if we set the target line to 100, the LCD interrupt function gets called when Game Boy starts drawing that line.
-      <br/>
-      The hblank is a short period of time at the end of each line of the LCD.
-      It corresponds to a time when nothing is drawn to the screen.
-      It is very important to us, because we have full access to the VRAM and graphics-related registers during the duration of the hblank.
-      The hblank interrupt triggers at each hblank, 144 times per frame.
-      The hblank is also known as <i>mode 00</i> and we'll use that term in this article from time to time.
-      </p>
-      <p>
-      First, we'll compute the horizontal scrolling value for all three layers.
-      Those scrolling values will be updated based on the movement of the astronaut.
-      We'll use different variables to compute the scrolling values to avoid any interference with the current LCD refresh.
-      Then, during the vblank, we'll set the <code>rSCX</code> register to the value of the sky scrolling.
-      We'll also copy the values for the scrolling of the rocks and ground into variables used in the interrupts.
-      Finally, when the next LCD refresh starts, the scrolling for the sky will be correct already.
-      As the interrupts trigger on lines 87 and 111, the <code>rSCX</code> register gets updated with the appropriate scrolling value.
-      This creates the parallax effect.
-      We'll see that there are a few more details when we check the actual assembly code.
-      </p>
-      <p>
       Let's now dive into the sample code.
-      We'll see the most important details of the implementation.
+      We'll review the most important details of the implementation here, and you can always check the full code in <a href="https://github.com/mdagois/mdagois.github.io/tree/main/samples/parallax">GitHub</a>.
       </p>
       <p>
       The sample declares several constants, as shown in Listing 1.
@@ -211,7 +219,7 @@ def GROUND_SPEED_X                  equ $0100</pre>
       We use 16-bit literals to have a more granular control over the speed of each layer.
       Those literals are fixed-point numbers.
       The most significant byte of the literal represents the integral part, while the least significant byte represents the fractional part.
-      For example, <code>GROUND_SPEED_X</code> represents the number <code>1.0</code>, and <code>ROCKS_SPEED_X</code> represents <code>0.5</code>.
+      Here, <code>GROUND_SPEED_X</code> represents the number <code>1.0</code>, <code>ROCKS_SPEED_X</code> represents <code>0.5</code>, and <code>SKY_SPEED</code> represents <code>0.25</code>.
       </p>
       <p>
       The sample uses several variables to store the layers' scrolling values.
@@ -238,10 +246,9 @@ rsset _RAM
       These hold the values meant to be copied to the <code>rSCX</code> register during the hblank interrupts.
       Their values is basically equal to the high bytes of the corresponding positions.
       For example, <code>WRAM_ROCKS_SCROLLING_X</code> holds the high byte of <code>WRAM_ROCKS_POSITION_X</code>.
-      The reason we don't use the positions' high byte directly is that we need to keep the scrolling values stable during the LCD refresh, at least until line 112.
-      Because the positions might get computed in the sample main loop before the interrupts get triggered, we need to copy their value to those buffer variables that are guaranteed to be stable through the LCD refresh.
-      Note that we don't have a buffer variables for the sky.
-      We'll see why that is when we check the vblank code.
+      The reason we don't use the positions' high byte directly in the interrupts is that we need to keep the scrolling values stable during the LCD refresh, at least until line 112.
+      Because the positions might get computed in the sample's main loop before the interrupts get triggered, we need to copy their value to those buffer variables that are guaranteed to be stable through the LCD refresh.
+      Note that we don't need a buffer variable for the sky, because the scrolling for the sky is set before the LCD refresh even starts (during vblank).
       </p>
       <p>
       At initialization time, all the WRAM variables are cleared to zero.
@@ -267,12 +274,12 @@ ei</pre>
       This is an essential step to enable the line compare interrupt, which is one type of LCD interrupt.
       Note that the hblank flag isn't raised yet in the <code>rSTAT</code> register.
       We don't want hblank interrupts to trigger on each line as it would waste cycles.
-      We raise the hblank flag only when necessary.
+      We'll raise the hblank flag during the LCD refresh, only when necessary.
       Finally, we enable both the vblank and LCD interrupts.
-      The vblank interrupt is essential for frame pacing, and we also use it each frame to prepare for the next line and hblank interrupts.
+      The vblank interrupt is essential for frame pacing, and we also use it each frame to prepare for the next line compare and hblank interrupts.
       </p>
       <p>
-      During the LCD refresh, we compute the position of all the layers for the next frame, as shown in Listing 4.
+      In the sample's main loop, we compute the positions of all the layers for the next frame, as shown in Listing 4.
       </p>
       <figure>
         <pre class="asmlisting">
@@ -298,7 +305,7 @@ ei</pre>
       <p>
       We add or subtract the speeds to the layer positions based on the direction the astronaut is walking to.
       The <code>u16_add</code> and <code>u16_sub</code> macros handle the fixed-point arithmetic.
-      You can check their code in the zip file.
+      You can check their code in the <a href="https://github.com/mdagois/mdagois.github.io/tree/main/samples/parallax">GitHub repository</a>.
       </p>
       <p>
       The updated positions are used during the vblank to prepare for the interrupts.
@@ -367,17 +374,13 @@ LcdInterrupt:
       </p>
       <p>
       The first interrupt to occur during the LCD refresh is the line compare interrupt on line 87, which we set up at initialization time.
-      While the interrupt occurs on line 87, we cannot update the <code>rSCX</code> register yet.
-      The value of the <code>rSCX</code> register is partially latched at the start of each line.
-      On one hand, the line compare interrupt on line 87 is too early, because that lines belongs to the sky layer.
-      On the other hand, the line compare interrupt on line 88 is too late, because the line would still use a part of the value of the sky scrolling. 
-      As a consequence, the only place where it is correct to change the value of the <code>rSCX</code> register is the hblank of line 87.
+      We cannot safely update the <code>rSCX</code> register during a line compare interrupt.
+      The reason is that the value of the <code>rSCX</code> register is read in a peculiar way by the hardware.
+      The lower three bits of the register are read at the start of the line, while the remaining five bits of the register are read several times over the drawing the line.
+      As a consequence, the only place where it is safe and correct to change the value of the <code>rSCX</code> register is the hblank of line 87.
       </p>
       <p>
-      The block formed by the first five instructions in the interrupt function has a dual purpose.
-      First, it enables the hblank interrupt, also knows as <i>mode 00</i> interrupt.
-      Second, it returns early if we are not in the hblank yet.
-      The relevant instructions from the interrupt function are shown in Listing 7.
+      The line compare interrupt on line 87 is handled by the first five instructions in the interrupt function, shown in Listing 7.
       </p>
       <figure>
         <pre class="asmlisting">
@@ -391,15 +394,17 @@ ret z</pre>
         <figcaption>Listing 7: Handling the line compare interrupt (hblank sample)</figcaption>
       </figure>
       <p>
+      These instructions have two purposes: they enable the hblank interrupt and they return early if we are not in the hblank yet.
       The first two instructions checks if the hblank flag, also known as mode 00 flag, is set in the <code>rSTAT</code> register.
-      If the mode 00 flag is clear, then the zero flag gets raised.
-      Otherwise, the zero flag gets cleared.
+      If the hblank flag is clear, then the CPU zero flag gets raised.
+      Otherwise, the CPU zero flag gets cleared.
       In the case of the line compare interrupt on line 87, the flag gets cleared, because we are not in the hblank yet (the line compare interrupt happens at the start of the line, while the hblank happens at the end).
-      The next two instructions enable the hblank interrupt, so that an interrupt triggers at the end of the line.
+      The next two instructions enable the hblank interrupt, so that a hblank interrupt triggers at the end of the line.
       The last instruction returns early, because we are not yet in a hblank interrupt, which means the zero flag has been cleared by the <code>bit</code> instruction.
       </p>
       <p>
       The next interrupt to trigger is the hblank interrupt on line 87.
+      As we've just seen, this interrupt was enabled by the line compare interrupt at the start of line 87.
       The execution go through the same exact first five instructions, but the function does not return early this time, because the hblank flag is up in the <code>rSTAT</code> register.
       The CPU additionally executes the instructions in the Listing 8.
       </p>
@@ -422,19 +427,18 @@ jr nz, .middle_section
         <figcaption>Listing 8: Handling line 87's hblank (hblank sample)</figcaption>
       </figure>
       <p>
-      The code checks if the interrupt occured on line 87 (<code>LINE_ROCKS</code>).
+      The code first checks whether the interrupt occured on line 87 (<code>LINE_ROCKS</code>).
       As this is the case in the hblank of line 87, the six instructions right after the <code>jr</code> instruction get executed.
       First, the <code>rSCX</code> register is updated with the scrolling value for the rocks.
-      Then, the target line for the line compare interrupt is set to 111 (<code>LINE_GROUND</code>).
-      Next, the line compare interrupt is re-enabled, so that we get an line compare interrupt on line 111.
+      Then, the target line for the line compare interrupt is set to 111 (<code>LINE_GROUND</code>) and the line compare interrupt is re-enabled, so that we get an line compare interrupt on line 111.
       Note that the hblank interrupt is disabled here.
-      This is important, because we don't want to trigger hblank interrupts on line 88 to 110 for performance reasons.
+      This is important, because we don't want to trigger hblank interrupts on lines 88 to 110 for performance reasons.
       Finally, the function returns, as there is nothing else to do to handle the rocks layer.
       </p>
       <p>
       The next interrupt occurs on line 111.
       This is the line compare interrupt that has been set up in Listing 8.
-      That new line compare interrupt is handled by the code in Listing 7, just like the first line compare interrupt.
+      That new line compare interrupt is handled by the code in Listing 7, just like the line compare interrupt on line 87.
       The interrupt function basically enables the hblank interrupt and returns early.
       </p>
       <p>
@@ -467,14 +471,14 @@ ret</pre>
       These instructions are very similar to those in Listing 8, with only two differences.
       The first difference is that the <code>rSCX</code> register gets updated with the scrolling value for the ground.
       The second difference is that the target line for the line compare interrupt is brought back to 87 (<code>LINE_GROUND</code>), to prepare for the next frame.
-      All subsequent frames will go through the same series of updates and interrupts.
       </p>
       <p>
       And that's it for the hblank method.
-      It relies on the proper usage of the line compare and hblank interrupts to update the <code>rSCX</code> register at key times during the frame to create the parallax effect.
+      All subsequent frames will go through the same series of updates and interrupts.
+      The hblank method relies on the proper usage of the line compare and hblank interrupts to update the <code>rSCX</code> register at key times during the frame to create the parallax effect.
       The advantage of this method is that it is well supported by the hardware.
       The LCD interrupts make the code efficient, and we only need a handful of instructions and variables to implement the parallax.
-      You could easily add more layers, but remember that each additional layers will consume some cycles (for the variable updates and additional interrupts), so there will be less cycles left for the game logic.
+      You could easily add more layers, but remember that each additional layers will consume some cycles for the variable updates and additional interrupts, so there will be less cycles left for the game logic.
       The main drawback of the hblank method is that layers cannot overlap.
       To get overlapping elements, you'd have to use sprites, with all the limitations they come with, such as the ten sprites limit per line.
       </p>
@@ -614,7 +618,7 @@ rsset _RAM
       <p>
       This code is very similar the code in the hblank sample.
       We add or subtract the speeds to the layer positions based on the direction the astronaut.
-      Again, you can check the code for the <code>u16_add</code> and <code>u16_sub</code> macros in the zip file.
+      Again, you can check the code for the <code>u16_add</code> and <code>u16_sub</code> macros in the <a href="https://github.com/mdagois/mdagois.github.io/tree/main/samples/parallax">GitHub repository</a>.
       </p>
       <p>
       The computation of the <code>WRAM_WALL_STARTING_TILE_ADDRESS</code> variable is shown in Listing 13.
