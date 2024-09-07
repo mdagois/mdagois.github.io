@@ -8,6 +8,13 @@
         <language>en-us</language>
 
         <item>
+            <title>Data Copy on the Game Boy</title>
+            <guid>https://mdagois.github.io/articles/gameboy_data_copy.html</guid>
+            <link>https://mdagois.github.io/articles/gameboy_data_copy.html</link>
+            <description>A discussion on data copy on the Game Boy.</description>
+            <pubDate>xxx Sep 2024 00:00:00 +0000</pubDate>
+        </item>
+        <item>
             <title>Parallax Scrolling on the Game Boy</title>
             <guid>https://mdagois.github.io/articles/gameboy_parallax.html</guid>
             <link>https://mdagois.github.io/articles/gameboy_parallax.html</link>
