@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Coding Adventures</title>
+        <atom:link href="https://mdagois.github.io/rss/rss.xml" rel="self" type="application/rss+xml" />
+        <link>https://mdagois.github.io</link>
+        <description>Articles on retro programming</description>
+        <language>en-us</language>
+
+        <item>
+            <title>Parallax Scrolling on the Game Boy</title>
+            <guid>https://mdagois.github.io/articles/gameboy_parallax.html</guid>
+            <link>https://mdagois.github.io/articles/gameboy_parallax.html</link>
+            <description>A hands-on guide to implementing parallax scrolling on the Game Boy.</description>
+            <pubDate>30 Aug 2024 00:00:00 +0000</pubDate>
+        </item>
+    </channel>
+</rss>
+
