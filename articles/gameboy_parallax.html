@@ -80,7 +80,7 @@
       </p>
       <p>
       This article uses code snippets to illustrate the implementation of the two parallax techniques.
-      The full commented source code for the samples is available on <a href="https://github.com/mdagois/mdagois.github.io.samples/tree/main/parallax">GitHub</a>.
+      The full commented source code for the samples is available on <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub</a>.
       You will also find prebuilt ROMs there, so that you can run the samples without having to build them first.
       The ROMs have been tested on both the BGB emulator and real hardware.
       </p>
@@ -201,7 +201,7 @@
       </p>
       <p>
       Let's now dive into the sample code.
-      We only review the code relevant to the parallax effect here, but you can always check the full code in <a href="https://github.com/mdagois/mdagois.github.io.samples/tree/main/parallax">GitHub</a>.
+      We only review the code relevant to the parallax effect here, but you can always check the full code in <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub</a>.
       </p>
       <p>
       The sample declares several constants, as shown in Listing 1.
@@ -307,7 +307,7 @@ ei</pre>
       <p>
       We add or subtract the speeds to the layer positions based on the direction the astronaut is walking to.
       The <code>u16_add</code> and <code>u16_sub</code> macros handle the fixed-point arithmetic.
-      You can check their code in the <a href="https://github.com/mdagois/mdagois.github.io.samples/tree/main/parallax">GitHub repository</a>.
+      You can check their code in the <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub repository</a>.
       </p>
       <p>
       The updated positions are used during the vblank to prepare for the interrupts.
@@ -620,7 +620,7 @@ rsset _RAM
       <p>
       This code is very similar to the code in the hblank sample.
       We add or subtract the speeds to the layer positions based on the direction of the astronaut.
-      Again, you can check the code for the <code>u16_add</code> and <code>u16_sub</code> macros in the <a href="https://github.com/mdagois/mdagois.github.io.samples/tree/main/parallax">GitHub repository</a>.
+      Again, you can check the code for the <code>u16_add</code> and <code>u16_sub</code> macros in the <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub repository</a>.
       </p>
       <p>
       The computation of the <code>WRAM_WALL_STARTING_TILE_ADDRESS</code> variable is shown in Listing 13.
