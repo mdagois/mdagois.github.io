@@ -82,6 +82,7 @@
       </p>
       <p>
       To demonstrate the speed advantage of the popslide, we'll measure the number of cycles required to copy 8 KiB of data into VRAM for each copy method.
+      We'll use BGB's built-in features to take the measurements using the two macros in Listing 1.
       </p>
       <figure>
         <pre class="asmlisting">
@@ -107,14 +108,23 @@ endm</pre>
         <figcaption>Listing 1: Measurement macros</figcaption>
       </figure>
       <p>
+      <code>ResetClockCounter</code> sets BGB's internal clocks counter back to zero.
+      <code>PrintClockCounter</code> outputs the number of cycles elapsed since the last reset to the debug messages window.
+      Listing 2 shows are those macros are used in the sample.
       </p>
       <figure>
         <pre class="asmlisting">
-    ResetClockCounter
-    CopyData graphics_data, _VRAM, 8 * 1024
-    PrintClockCounter</pre>
+ResetClockCounter
+CopyData graphics_data, _VRAM, 8 * 1024
+PrintClockCounter</pre>
         <figcaption>Listing 2: Measuring the cycles taken by the copy</figcaption>
       </figure>
+      <p>
+      We basically sandwich the <code>CopyData</code> function between <code>ResetClockCounter</code> and <code>PrintClockCounter</code>.
+      This will display the number of cycles taken by the copy to the debug messages windows each time the sample is run.
+      </p>
+
+      <hr/>
 
       <h4>Brute force copy</h4>
       <p>
@@ -172,6 +182,8 @@ endm</pre>
         <figcaption>Listing 4: Copying data (optimized)</figcaption>
       </figure>
 
+      <hr/>
+
       <h4>Pop slide</h4>
       <p>
       Introducing pop slide
@@ -216,11 +228,12 @@ endm</pre>
         <figcaption>Listing 5: Copying data (popslide)</figcaption>
       </figure>
 
+      <hr/>
 
-      <h4>Note on the Game Boy Color</h4>
+      <h4>Notes</h4>
       <p>
+      di / ei
       Talk about DMA being a superior technique.
-      Measuring cycle cost
       </p>
 
       <hr/>
