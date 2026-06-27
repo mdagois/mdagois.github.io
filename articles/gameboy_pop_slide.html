@@ -6,6 +6,14 @@
     <title>Coding Adventure</title>
     <link rel="stylesheet" href="../bootstrap.min.css">
     <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <style>
+.asmlisting {
+  border: 2px dashed white;
+  padding: 20px;
+  margin: 0;
+  width: fit-content
+}
+    </style>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
@@ -41,60 +49,164 @@
 
       <h3>Pop Slide on the Game Boy</h3>
       <p>
-	  Description
+      This article presents the <i>pop slide</i>, a technique to copy data fast on the Game Boy.
+      It was first introduced to me by Dave VanEe, a reader of <a href="https://nostarch.com/game-boy-coding-adventure" target="_blank">Game Boy Coding Adventure</a>.
+      We'll start with a brute force copy that is generic but slow.
+      We'll then move on writing an optimized version of the brute force copy.
+      Finally, we'll see the pop slide, which is the fastest way to copy data, but comes with small drawbacks.
+      By the end of the article, you'll have all the knowledge necessary to choose the right copy method for your game.
       </p>
 
       <hr/>
 
-      <h4>Preamble</h4>
+      <h4>Sample</h4>
       <p>
-	  Waterfall example
+      For this article, we'll build a simple sample, shown in Figure 1, and implemented three different copy methods, the last one being the popslide.
+      </p>
       <figure>
-        <img src="../images/parallax/xxx.png">
-        <figcaption>Figure 1: The waterfall effect</figcaption>
+        <img src="../images/popslide/popslide.png">
+        <figcaption>Figure 1: The sample</figcaption>
       </figure>
-      <figure>
-        <video autoplay loop muted preload="auto">
-          <source src="../video/parallax/xxx.mp4" type="video/mp4">
-          Your browser does not support the video tag.
-        </video>
-        <figcaption>Figure 1: The waterfall effect</figcaption>
-      </figure>
+      <p>
+      To demonstrate the speed advantage of the popslide, we'll measure the number of cycles required to copy 8 KiB of data into VRAM for each copy method.
+      The popslide can be used to copy data anywhere in memory, but in games, it was typically used to copy data during the vblank, where its speed advantage would allow to copy more tile data.
+      </p>
+      <p>
+      This article uses code snippets to illustrate the implementation of the three copy methods.
+      The full commented source code for the samples is available on <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub</a>.
+      You will also find prebuilt ROMs there, so that you can run the samples without having to build them first.
+      The ROMs have been tested on both the BGB emulator and real hardware.
+      </p>
+      <p>
+      The samples are written in assembly for the <a href="https://rgbds.gbdev.io/" target="_blank">RGBDS</a> toolchain.
+      You should be familiar with programming the Game Boy in assembly in order to follow along with the code samples.
+      To get a strong introduction to Game Boy programming in assembly, I recommend you to check my book,
+      <a href="https://nostarch.com/game-boy-coding-adventure" target="_blank">Game Boy Coding Adventure</a>.
+      It is a complete coverage of all the aspects of programming the Game Boy, using a beginner-friendly approach for those new to assembly.
+      </p>
+      <p>
+      While the samples are made for the original Game Boy, the techniques they use are relevant to the Game Boy Color too.
+      However, you should always favor using DMA on the Game Boy Color when applicable, e.g. when copying data to VRAM.
       </p>
 
       <h4>Brute force copy</h4>
       <p>
-	  Copy with loop
-	  Copy with no loop
-	  Measuring cycle cost
-	  Create version that breaks the sample and requires pop slide
+      Copy with loop
+BRUTE_FORCE 34018 cycles
+      Copy with no loop
+OPTIMIZED 18816 cycles
+      Measuring cycle cost
+      Create version that breaks the sample and requires pop slide
       </p>
+      <figure>
+        <pre class="asmlisting">
+macro CopyData
+    ld de, \1
+    ld hl, \2
+    ld bc, \3
+    .loop\@
+        ; copy a byte from source to destination
+        ld a, [de]
+        ld [hli], a
+        inc de
+
+        ; check if the copy is over
+        dec bc
+        ld a, c
+        or a, b
+        jr nz, .loop\@
+endm</pre>
+        <figcaption>Listing 1: Copying data (brute force)</figcaption>
+      </figure>
+
+      <figure>
+        <pre class="asmlisting">
+macro CopyData
+    assert \3 &amp; $1F == 0, "The size must be a multiple of 32"
+    assert \3 &ge; 32 * 256, "The size must be inferior or equal to 8192"
+
+    ld de, \1
+    ld hl, \2
+
+    ld c, (\3 / 32) &amp; 255
+    .loop\@
+        ; copy 32 bytes
+        rept 32
+        ld a, [de]
+        ld [hli], a
+        inc de
+        endr
+
+        ; check if the copy is over
+        dec c
+        jr nz, .loop\@
+endm</pre>
+        <figcaption>Listing 2: Copying data (optimized)</figcaption>
+      </figure>
 
       <h4>Pop slide</h4>
       <p>
-	  Introducing pop slide
-	  Measuring cycle cost
+      Introducing pop slide
+      Measuring cycle cost
+POPSLIDE 12834 cycles
       </p>
+
+      <figure>
+        <pre class="asmlisting">
+macro CopyData
+    assert \3 &amp; $1F == 0, "The size must be a multiple of 32"
+    assert \3 &ge; 32 * 256, "The size must be inferior or equal to 8192"
+
+    ; save the stack pointer
+    ld [WRAM_STACK_POINTER], sp
+
+    ld sp, \1
+    ld hl, \2
+
+    ld c, (\3 / 32) &amp; 255
+    .loop\@
+        ; copy 32 bytes
+        rept 16
+        pop de
+        ld a, e
+        ld [hli], a
+        ld a, d
+        ld [hli], a
+        endr
+
+        ; check if the copy is over
+        dec c
+        jr nz, .loop\@
+
+    ; restore the stack pointer
+    ld hl, WRAM_STACK_POINTER
+    ld a, [hli]
+    ld h, [hl]
+    ld l, a
+    ld sp, hl
+endm</pre>
+        <figcaption>Listing 2: Copying data (popslide)</figcaption>
+      </figure>
+
 
       <h4>Note on the Game Boy Color</h4>
       <p>
-	  Talk about DMA being a superior technique.
-	  Measuring cycle cost
+      Talk about DMA being a superior technique.
+      Measuring cycle cost
       </p>
 
       <hr/>
 
       <h4>Conclusion</h4>
       <p>
-	  Mostly for DMG
+      Mostly for DMG
       </p>
 
       <hr/>
 
       <h4>Art Attribution</h4>
       <p>
-	  Any art attribution
-      https://xcrossbite.itch.io/
+      The image used in the samples is from <a href="https://xcrossbite.itch.io/" target="_blank">xCrossbite</a>.
       </p>
     </div>
 
