@@ -68,10 +68,6 @@
         <figcaption>Figure 1: The sample</figcaption>
       </figure>
       <p>
-      To demonstrate the speed advantage of the popslide, we'll measure the number of cycles required to copy 8 KiB of data into VRAM for each copy method.
-      The popslide can be used to copy data anywhere in memory, but in games, it was typically used to copy data during the vblank, where its speed advantage would allow to copy more tile data.
-      </p>
-      <p>
       This article uses code snippets to illustrate the implementation of the three copy methods.
       The full commented source code for the samples is available on <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub</a>.
       You will also find prebuilt ROMs there, so that you can run the samples without having to build them first.
@@ -85,18 +81,50 @@
       It is a complete coverage of all the aspects of programming the Game Boy, using a beginner-friendly approach for those new to assembly.
       </p>
       <p>
-      While the samples are made for the original Game Boy, the techniques they use are relevant to the Game Boy Color too.
-      However, you should always favor using DMA on the Game Boy Color when applicable, e.g. when copying data to VRAM.
+      To demonstrate the speed advantage of the popslide, we'll measure the number of cycles required to copy 8 KiB of data into VRAM for each copy method.
       </p>
+      <figure>
+        <pre class="asmlisting">
+; Reset BGB's clock counter.
+macro ResetClockCounter
+    ld d, d
+    jr .skip\@
+    dw $6464
+    dw $0000
+    db "Clock counter reset %ZEROCLKS%", 0
+    .skip\@
+endm
+
+; Print BGB's clock counter value.
+macro PrintClockCounter
+    ld d, d
+    jr .skip\@
+    dw $6464
+    dw $0000
+    db "Cycles: %LASTCLKS%", 0
+    .skip\@
+endm</pre>
+        <figcaption>Listing 1: Measurement macros</figcaption>
+      </figure>
+      <p>
+      </p>
+      <figure>
+        <pre class="asmlisting">
+    ResetClockCounter
+    CopyData graphics_data, _VRAM, 8 * 1024
+    PrintClockCounter</pre>
+        <figcaption>Listing 2: Measuring the cycles taken by the copy</figcaption>
+      </figure>
 
       <h4>Brute force copy</h4>
       <p>
+      Let's start with the brute force copy.
+
       Copy with loop
 BRUTE_FORCE 34018 cycles
       Copy with no loop
 OPTIMIZED 18816 cycles
       Measuring cycle cost
-      Create version that breaks the sample and requires pop slide
       </p>
       <figure>
         <pre class="asmlisting">
@@ -116,7 +144,7 @@ macro CopyData
         or a, b
         jr nz, .loop\@
 endm</pre>
-        <figcaption>Listing 1: Copying data (brute force)</figcaption>
+        <figcaption>Listing 3: Copying data (brute force)</figcaption>
       </figure>
 
       <figure>
@@ -141,7 +169,7 @@ macro CopyData
         dec c
         jr nz, .loop\@
 endm</pre>
-        <figcaption>Listing 2: Copying data (optimized)</figcaption>
+        <figcaption>Listing 4: Copying data (optimized)</figcaption>
       </figure>
 
       <h4>Pop slide</h4>
@@ -185,7 +213,7 @@ macro CopyData
     ld l, a
     ld sp, hl
 endm</pre>
-        <figcaption>Listing 2: Copying data (popslide)</figcaption>
+        <figcaption>Listing 5: Copying data (popslide)</figcaption>
       </figure>
 
 
@@ -200,6 +228,9 @@ endm</pre>
       <h4>Conclusion</h4>
       <p>
       Mostly for DMG
+      The popslide can be used to copy data anywhere in memory, but in games, it was typically used to copy data during the vblank, where its speed advantage would allow to copy more tile data.
+      While the samples are made for the original Game Boy, the techniques they use are relevant to the Game Boy Color too.
+      However, you should always favor using DMA on the Game Boy Color when applicable, e.g. when copying data to VRAM.
       </p>
 
       <hr/>
