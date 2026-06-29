@@ -270,18 +270,16 @@ endm</pre>
 
       <h4>Conclusion</h4>
       <p>
-      Mostly for DMG
-      Talk about DMA being a superior technique.
-      The popslide can be used to copy data anywhere in memory, but in games, it was typically used to copy data during the vblank, where its speed advantage would allow to copy more tile data.
-      While the samples are made for the original Game Boy, the techniques they use are relevant to the Game Boy Color too.
-      However, you should always favor using DMA on the Game Boy Color when applicable, e.g. when copying data to VRAM.
-      </p>
-
+      In this article, we three methods to copy data on the Game Boy, with a focus on the pop slide.
+      You should now have a good grasp of how to implement the pop slide.
+      You should also understand its benefits and drawbacks, and be able to use it properly in your games.
+      Table 1 lists up the copy methods along their <i>Cycles</i> and <i>Cycles per byte</i>.
       <table class="table">
+        <caption>Table 1: Performance of the copy methods
         <thead>
           <tr>
             <th scope="col" class="table-primary">Method</th>
-            <th scope="col" class="table-primary">Cycle</th>
+            <th scope="col" class="table-primary">Cycles</th>
             <th scope="col" class="table-primary">Cycles per byte</th>
           </tr>
         </thead>
@@ -303,6 +301,12 @@ endm</pre>
           </tr>
         </tbody>
       </table>
+      </p>
+      <p>
+      The popslide can be used to copy data anywhere in memory, but in games, it was typically used to copy data during the vblank, where its speed advantage would allow to copy more tile data.
+      While the samples are made for the original Game Boy, the pop slide is also relevant in the context of the Game Boy Color.
+      However, you should always favor using DMA on the Game Boy Color when applicable, e.g. when copying data to VRAM, as DMA exhibit a performance of 2 cycles per byte, which is unachievable without it.
+      </p>
 
       <hr/>
 
