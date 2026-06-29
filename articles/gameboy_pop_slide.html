@@ -133,7 +133,7 @@ PrintClockCounter</pre>
 
       <hr/>
 
-      <h4>Brute force copy</h4>
+      <h4>Brute Force Copy</h4>
       <p>
       Let's start with the brute force copy.
       It consists of a loop that copies bytes one by one in each iteration, as shown in Listing 3.
@@ -164,6 +164,10 @@ endm</pre>
       BGB report s34010 in hexadecimal, or 213,008 clocks.
       Dividing the clocks by 2 yields 106,504 cycles, which is exactly what was expected.
       </p>
+
+      <hr/>
+
+      <h4>Optimized Copy</h4>
       <p>
       The second copy method improves the performance over the brute force method in two ways.
       First, it batches 32 bytes copies in each iteration, avoiding the cycle cost of <code>jr</code> for each byte.
@@ -204,7 +208,7 @@ endm</pre>
 
       <hr/>
 
-      <h4>Pop slide</h4>
+      <h4>Pop Slide</h4>
       <p>
       The pop slide method uses a clever stack trick to further improve the copy speed over the performance of the optimized method.
       First, it sets the stack pointer to point to the start of the data to copy.
