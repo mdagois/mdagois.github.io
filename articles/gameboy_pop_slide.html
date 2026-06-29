@@ -196,7 +196,7 @@ endm</pre>
         <figcaption>Listing 4: Copying data (optimized)</figcaption>
       </figure>
       <p>
-      The cost of a single iteration is 196 cycles (32 * 6 + 1 + 4) for the copy of 32 bytes.
+      The cost of a single iteration is 196 cycles (32 * 6 + 1 + 3) for the copy of 32 bytes.
       There are 256 iterations (8,192 / 32), which makes 50,175 (196 * 256 - 1 for the last <code>jr</code>) cycles for the loop and a grand total of 50,183 cycles when we add the 8 cycles to set the registers before the loop begins.
       BGB reports 1880E in hexadecimal, or 100,366 clocks.
       Dividing the clocks by 2 yields 50,183 cycles, which is again exactly what was expected.
@@ -206,11 +206,12 @@ endm</pre>
 
       <h4>Pop slide</h4>
       <p>
-      Introducing pop slide
-      Measuring cycle cost
-POPSLIDE 12834 cycles
+      The pop slide method uses a clever stack trick to further improve the copy speed over the performance of the optimized method.
+      First, it sets the stack pointer to point to the start of the data to copy.
+      Then, and that's the clever part, it uses <code>pop</code> instead of <code>ld</code> to retrieve two byte of data at a time.
+      Finally, it copy the byte to the destination using optimized <code>ld [hli], a</code> instructions.
+      The code is shown is Listing 5.
       </p>
-
       <figure>
         <pre class="asmlisting">
 macro CopyData
@@ -218,35 +219,42 @@ macro CopyData
     assert \3 &ge; 32 * 256, "The size must be inferior or equal to 8192"
 
     ; save the stack pointer
-    ld [WRAM_STACK_POINTER], sp
+    ld [WRAM_STACK_POINTER], sp     ; 5
 
-    ld sp, \1
-    ld hl, \2
+    ld sp, \1                       ; 3
+    ld hl, \2                       ; 3
 
-    ld c, (\3 / 32) &amp; 255
+    ld c, (\3 / 32) &amp; 255           ; 2
     .loop\@
         ; copy 32 bytes
         rept 16
-        pop de
-        ld a, e
-        ld [hli], a
-        ld a, d
-        ld [hli], a
+        pop de                      ; 3
+        ld a, e                     ; 1
+        ld [hli], a                 ; 2
+        ld a, d                     ; 1
+        ld [hli], a                 ; 2
         endr
 
         ; check if the copy is over
-        dec c
-        jr nz, .loop\@
+        dec c                       ; 1
+        jr nz, .loop\@              ; 3
 
     ; restore the stack pointer
-    ld hl, WRAM_STACK_POINTER
-    ld a, [hli]
-    ld h, [hl]
-    ld l, a
-    ld sp, hl
+    ld hl, WRAM_STACK_POINTER       ; 3
+    ld a, [hli]                     ; 2
+    ld h, [hl]                      ; 2
+    ld l, a                         ; 1
+    ld sp, hl                       ; 2
 endm</pre>
         <figcaption>Listing 5: Copying data (popslide)</figcaption>
       </figure>
+      <p>
+      Let's go through measuring the cycles again.
+      The cost of a single iteration is 148 cycles (16 * 9 + 1 + 3) for the copy of 32 bytes.
+      There are 256 iterations (8,192 / 32), which makes 37,887 (148 * 256 - 1 for the last <code>jr</code>) cycles for the loop and a grand total of 37,910 cycles when we add the 13 cycles to set the registers before the loop begins, and the 10 cycles to restore the stack pointer to its original value after the loop.
+      BGB reports 1282C in hexadecimal, or 75,820 clocks.
+      Dividing the clocks by 2 yields 37,910 cycles, which is yet again exactly what was expected.
+      </p>
 
       <hr/>
 
@@ -287,7 +295,8 @@ endm</pre>
           </tr>
           <tr class="table-dark">
             <td>Pop Slide</td>
-            <td>xxx</td>
+            <td>37,910</td>
+            <td>4.63</td>
           </tr>
         </tbody>
       </table>
