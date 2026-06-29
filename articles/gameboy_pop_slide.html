@@ -102,15 +102,22 @@ macro PrintClockCounter
     jr .skip\@
     dw $6464
     dw $0000
-    db "Cycles: %LASTCLKS%", 0
+    db "Cycles: %-8+LASTCLKS%", 0
     .skip\@
 endm</pre>
         <figcaption>Listing 1: Measurement macros</figcaption>
       </figure>
       <p>
       <code>ResetClockCounter</code> sets BGB's internal clocks counter back to zero.
-      <code>PrintClockCounter</code> outputs the number of cycles elapsed since the last reset to the debug messages window.
-      Listing 2 shows are those macros are used in the sample.
+      <code>PrintClockCounter</code> outputs the number of clocks elapsed since the last reset to the debug messages window.
+      There are several important notes concerning the clock value reported by BGB.
+      First, we need subtract 8 from <code>LASTCLKS</code> to account for the overhead of BGB's debug message mechanics.
+      Second, the value is printed in hexadecimal, which you might want to convert to decimal for a more intuitive grasp.
+      Lastly, BGB clocks values do not correspond to the Game Boy M-cycle, and not even to T-cycles.
+      Instead, we need to divide the clocks values by 2 to get M-cycles, and by 8 to get T-cycles, since each M-cycle amounts to four T-cycles.
+      </p>
+      <p>
+      Listing 2 shows are the two clock counter macros are used in the sample.
       </p>
       <figure>
         <pre class="asmlisting">
@@ -129,58 +136,71 @@ PrintClockCounter</pre>
       <h4>Brute force copy</h4>
       <p>
       Let's start with the brute force copy.
-
-      Copy with loop
-BRUTE_FORCE 34018 cycles
-      Copy with no loop
-OPTIMIZED 18816 cycles
-      Measuring cycle cost
+      It consists of a loop that copies bytes one by one in each iteration, as shown in Listing 3.
       </p>
       <figure>
         <pre class="asmlisting">
 macro CopyData
-    ld de, \1
-    ld hl, \2
-    ld bc, \3
+    ld de, \1           ; 3
+    ld hl, \2           ; 3
+    ld bc, \3           ; 3
     .loop\@
         ; copy a byte from source to destination
-        ld a, [de]
-        ld [hli], a
-        inc de
+        ld a, [de]      ; 2
+        ld [hli], a     ; 2
+        inc de          ; 2
 
         ; check if the copy is over
-        dec bc
-        ld a, c
-        or a, b
-        jr nz, .loop\@
+        dec bc          ; 2
+        ld a, c         ; 1
+        or a, b         ; 1
+        jr nz, .loop\@  ; 3
 endm</pre>
         <figcaption>Listing 3: Copying data (brute force)</figcaption>
       </figure>
-
+      <p>
+      The cost of a single iteration is 13 cycles.
+      Since we copy 8,192 bytes, that makes 106,495 (13 * 8192 - 1 for the last <code>jr</code>) cycles for the loop and a grand total of 106,504 cycles when we add the 9 cycles to set the registers before the loop begins.
+      BGB report s34010 in hexadecimal, or 213,008 clocks.
+      Dividing the clocks by 2 yields 106,504 cycles, which is exactly what was expected.
+      </p>
+      <p>
+      The second copy method improves the performance over the brute force method in two ways.
+      First, it batches 32 bytes copies in each iteration, avoiding the cycle cost of <code>jr</code> for each byte.
+      Second, it uses a single-byte iteration count, reducing the cost of counting down the iterations of the loop.
+      The main disadvantage of that copy is that it takes more bytes in the ROM, but nowadays, it is usually a better trade-off to optimize for cycles than for bytes.
+      Listing 4 shows the code for the optimized copy method.
+      </p>
       <figure>
         <pre class="asmlisting">
 macro CopyData
     assert \3 &amp; $1F == 0, "The size must be a multiple of 32"
     assert \3 &ge; 32 * 256, "The size must be inferior or equal to 8192"
 
-    ld de, \1
-    ld hl, \2
+    ld de, \1               ; 3
+    ld hl, \2               ; 3
 
-    ld c, (\3 / 32) &amp; 255
+    ld c, (\3 / 32) &amp; 255   ; 2
     .loop\@
         ; copy 32 bytes
         rept 32
-        ld a, [de]
-        ld [hli], a
-        inc de
+        ld a, [de]          ; 2
+        ld [hli], a         ; 2
+        inc de              ; 2
         endr
 
         ; check if the copy is over
-        dec c
-        jr nz, .loop\@
+        dec c               ; 1
+        jr nz, .loop\@      ; 3
 endm</pre>
         <figcaption>Listing 4: Copying data (optimized)</figcaption>
       </figure>
+      <p>
+      The cost of a single iteration is 196 cycles (32 * 6 + 1 + 4) for the copy of 32 bytes.
+      There are 256 iterations (8,192 / 32), which makes 50,175 (196 * 256 - 1 for the last <code>jr</code>) cycles for the loop and a grand total of 50,183 cycles when we add the 8 cycles to set the registers before the loop begins.
+      BGB reports 1880E in hexadecimal, or 100,366 clocks.
+      Dividing the clocks by 2 yields 50,183 cycles, which is again exactly what was expected.
+      </p>
 
       <hr/>
 
@@ -245,6 +265,32 @@ endm</pre>
       While the samples are made for the original Game Boy, the techniques they use are relevant to the Game Boy Color too.
       However, you should always favor using DMA on the Game Boy Color when applicable, e.g. when copying data to VRAM.
       </p>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col" class="table-primary">Method</th>
+            <th scope="col" class="table-primary">Cycle</th>
+            <th scope="col" class="table-primary">Cycles per byte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="table-dark">
+            <td>Brute force</td>
+            <td>106,504</td>
+            <td>13.00</td>
+          </tr>
+          <tr class="table-secondary">
+            <td>Optimized</td>
+            <td>50,183</td>
+            <td>6.13</td>
+          </tr>
+          <tr class="table-dark">
+            <td>Pop Slide</td>
+            <td>xxx</td>
+          </tr>
+        </tbody>
+      </table>
 
       <hr/>
 
