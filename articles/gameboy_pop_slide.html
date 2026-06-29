@@ -168,7 +168,7 @@ endm</pre>
       The second copy method improves the performance over the brute force method in two ways.
       First, it batches 32 bytes copies in each iteration, avoiding the cycle cost of <code>jr</code> for each byte.
       Second, it uses a single-byte iteration count, reducing the cost of counting down the iterations of the loop.
-      The main disadvantage of that copy is that it takes more bytes in the ROM, but nowadays, it is usually a better trade-off to optimize for cycles than for bytes.
+      The main disadvantage of that copy is that it takes 90 more bytes in the ROM, but nowadays, it is usually a better trade-off to optimize for cycles than for bytes.
       Listing 4 shows the code for the optimized copy method.
       </p>
       <figure>
@@ -255,13 +255,15 @@ endm</pre>
       BGB reports 1282C in hexadecimal, or 75,820 clocks.
       Dividing the clocks by 2 yields 37,910 cycles, which is yet again exactly what was expected.
       </p>
-
-      <hr/>
-
-      <h4>Notes</h4>
       <p>
-      di / ei
-      Talk about DMA being a superior technique.
+      Pop slide clearly offers a significant boost up in copy performance.
+      It consumes 84 more bytes in ROM than the brute force copy, but 6 less bytes than the optimized method.
+      The main disadvantage is that you'll need to disable interrupts when using the pop slide method.
+      The reason is that when an interrupt occurs, the program counter is pushed on the stack so that execution can return back from the interrupt function properly.
+      But, as the pop slide temporarily overrides the stack pointer, any interrupt will cause undefined behaviors such as data corruption or a crash.
+      In the sample, because we perform the copy during the initialization phase, the interrupts are already disabled.
+      That will also be the case if you use the pop slide from inside an interrupt function (before <code>reti</code>) like the vblank function.
+      However, in general, during the frame, you'd need to sandwich the pop slide between <code>di</code> and <code>ei</code> instructions.
       </p>
 
       <hr/>
@@ -269,6 +271,7 @@ endm</pre>
       <h4>Conclusion</h4>
       <p>
       Mostly for DMG
+      Talk about DMA being a superior technique.
       The popslide can be used to copy data anywhere in memory, but in games, it was typically used to copy data during the vblank, where its speed advantage would allow to copy more tile data.
       While the samples are made for the original Game Boy, the techniques they use are relevant to the Game Boy Color too.
       However, you should always favor using DMA on the Game Boy Color when applicable, e.g. when copying data to VRAM.
