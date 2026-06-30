@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Coding Adventure</title>
+    <link rel="stylesheet" href="../bootstrap.min.css">
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <style>
+.asmlisting {
+  border: 2px dashed white;
+  padding: 20px;
+  margin: 0;
+  width: fit-content
+}
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+      <div class="container-fluid">
+        <div class="navbar-brand">Coding Adventures</div>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarColor01">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="../index.html">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="../portfolio.html">Portfolio</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="../about.html">About</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="../contact.html">Contact</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <br/>
+      <p>
+      <img src="../images/gameboy.png" class="rounded mx-auto d-block">
+      </p>
+
+      <h3>Pop Slide on the Game Boy</h3>
+      <p>
+      This article explores the <i>pop slide</i>, a high-performance technique for rapid data copying on the Game Boy.
+	  This trick was introduced to me by Dave VanEe, a reader of my book, <a href="https://nostarch.com/game-boy-coding-adventure" target="_blank">Game Boy Coding Adventure</a>. 
+      </p>
+      <p>
+      We will begin with a standard "brute force" copy, which is easy to implement but relatively slow.
+	  From there, we will refine it into an optimized version.
+	  Finally, we will implement the pop slide, the fastest way to copy data on the hardware, while navigating a few of its unique trade-offs.
+	  By the end, you will have the knowledge to select the perfect copy method for your own projects.
+      </p>
+
+      <hr/>
+
+      <h4>The Setup</h4>
+      <p>
+      To demonstrate these techniques, we’ll use the simple sample shown in Figure 1, applying each of our three copy methods.
+      </p>
+      <figure>
+        <img src="../images/popslide/popslide.png">
+        <figcaption>Figure 1: The test sample</figcaption>
+      </figure>
+      <p>
+      Full commented source code for the samples is available on <a href="https://github.com/mdagois/mdagois.github.io.samples" target="_blank">GitHub</a>.
+	  You will also find pre-built ROMs there, allowing you to test the performance on the BGB emulator or real hardware immediately.
+      </p>
+      <p>
+      These samples are written in assembly for the <a href="https://rgbds.gbdev.io/" target="_blank">RGBDS</a> toolchain.
+	  If you are new to assembly or looking for a deep dive into Game Boy hardware, my book, <a href="https://nostarch.com/game-boy-coding-adventure" target="_blank">Game Boy Coding Adventure</a>, provides a comprehensive, beginner-friendly guide to everything you need to know.
+      </p>
+      <p>
+      To prove the efficiency of the pop slide, we will measure the cycles required to copy 8 KiB of data into VRAM.
+	  We use the two macros in Listing 1 to interface with BGB’s built-in profiler.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+; Reset BGB's clock counter.
+macro ResetClockCounter
+    ld d, d
+    jr .skip\@
+    dw $6464
+    dw $0000
+    db "Clock counter reset %ZEROCLKS%", 0
+    .skip\@
+endm
+
+; Print BGB's clock counter value.
+macro PrintClockCounter
+    ld d, d
+    jr .skip\@
+    dw $6464
+    dw $0000
+    db "Cycles: %-8+LASTCLKS%", 0
+    .skip\@
+endm</pre>
+        <figcaption>Listing 1: Performance measurement macros</figcaption>
+      </figure>
+      <p>
+      <code>ResetClockCounter</code> resets the clock counter to zero, while <code>PrintClockCounter</code> displays the elapsed clocks in the BGB debug window.
+	  A few quick notes on interpreting these results:
+      </p>
+      <ul>
+        <li>The macro subtracts 8 from the <code>LASTCLKS</code> value to account for the overhead of the debug call.</li>
+        <li>BGB outputs clock values in hexadecimal.</li>
+        <li>BGB's clocks aren't standard Game Boy cycles.
+            We must divide the output by 2 to get M-cycles, or by 8 to get T-cycles (since one M-cycle equals four T-cycles).
+        </li>
+      </ul>
+      <p>
+      Listing 2 shows how we measure our <code>CopyData</code> routine:
+      </p>
+      <figure>
+        <pre class="asmlisting">
+ResetClockCounter
+CopyData graphics_data, _VRAM, 8 * 1024
+PrintClockCounter</pre>
+        <figcaption>Listing 2: Measuring the copy function performance</figcaption>
+      </figure>
+      <p>
+      We basically sandwich the <code>CopyData</code> function between <code>ResetClockCounter</code> and <code>PrintClockCounter</code>.
+      This will display the number of clocks taken by the copy to the debug messages windows each time the sample is run.
+      </p>
+
+      <hr/>
+
+      <h4>Brute Force Copy</h4>
+      <p>
+      Our baseline method consists of a simple loop to copy data byte-by-byte, as shown in Listing 3.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+macro CopyData
+    ld de, \1           ; 3
+    ld hl, \2           ; 3
+    ld bc, \3           ; 3
+    .loop\@
+        ; copy a byte from source to destination
+        ld a, [de]      ; 2
+        ld [hli], a     ; 2
+        inc de          ; 2
+
+        ; check if the copy is over
+        dec bc          ; 2
+        ld a, c         ; 1
+        or a, b         ; 1
+        jr nz, .loop\@  ; 3
+endm</pre>
+        <figcaption>Listing 3: Brute force approach</figcaption>
+      </figure>
+      <p>
+      Each iteration costs 13 cycles.
+	  Copying 8,192 bytes results in 106,504 total cycles.
+	  BGB will report 34010 (hex), or 213,008 clocks.
+	  Dividing by 2 yields 106,504, which confirms our computed cycle count.
+      </p>
+
+      <hr/>
+
+      <h4>Optimized Copy</h4>
+      <p>
+      To improve performance, we can batch our copy operations.
+	  By unrolling the loop to handle 32 bytes at a time, we reduce the overhead caused by conditional jumps (<code>jr</code>) and simplify the loop counter by using an 8-bit register instead of a 16-bit one.
+	  While this increases the ROM footprint by 90 bytes, the cycle savings are significant.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+macro CopyData
+    assert \3 &amp; $1F == 0, "The size must be a multiple of 32"
+    assert \3 &ge; 32 * 256, "The size must be inferior or equal to 8192"
+
+    ld de, \1               ; 3
+    ld hl, \2               ; 3
+
+    ld c, (\3 / 32) &amp; 255   ; 2
+    .loop\@
+        ; copy 32 bytes
+        rept 32
+        ld a, [de]          ; 2
+        ld [hli], a         ; 2
+        inc de              ; 2
+        endr
+
+        ; check if the copy is over
+        dec c               ; 1
+        jr nz, .loop\@      ; 3
+endm</pre>
+        <figcaption>Listing 4: Optimized batch copy</figcaption>
+      </figure>
+      <p>
+      The cost of a single iteration is 196 cycles (32 * 6 + 1 + 3) for the copy of 32 bytes.
+      There are 256 iterations (8,192 / 32), which makes 50,175 cycles (196 * 256 - 1 for the last <code>jr</code>) for the loop and a grand total of 50,183 cycles when we add the 8 cycles to set the registers before the loop begins.
+      BGB reports 1880E (hex), or 100,366 clocks.
+      Dividing the clocks by 2 yields 50,183 cycles, which is again exactly what was expected.
+      Performance-wise, this method is a massive improvement over the brute force approach.
+      </p>
+
+      <hr/>
+
+      <h4>The Pop Slide</h4>
+      <p>
+      The pop slide is a clever trick that leverages the stack pointer to bypass standard loading instructions.
+	  By setting the stack pointer <code>sp</code> to the source data and using <code>pop</code> instead of <code>ld</code>, we can retrieve two bytes at a time, significantly speeding up the transfer.
+      The code for the pop slide is shown is Listing 5.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+macro CopyData
+    assert \3 &amp; $1F == 0, "The size must be a multiple of 32"
+    assert \3 &ge; 32 * 256, "The size must be inferior or equal to 8192"
+
+    ; save the stack pointer
+    ld [WRAM_STACK_POINTER], sp       ; 5
+
+    ld sp, \1                         ; 3
+    ld hl, \2                         ; 3
+
+    ld c, (\3 / 32) &amp; 255             ; 2
+    .loop\@
+        ; copy 32 bytes
+        rept 16
+        pop de                        ; 3
+        ld a, e                       ; 1
+        ld [hli], a                   ; 2
+        ld a, d                       ; 1
+        ld [hli], a                   ; 2
+        endr
+
+        ; check if the copy is over
+        dec c                         ; 1
+        jr nz, .loop\@                ; 3
+
+    ; restore the stack pointer
+    ld hl, WRAM_STACK_POINTER         ; 3
+    ld a, [hli]                       ; 2
+    ld h, [hl]                        ; 2
+    ld l, a                           ; 1
+    ld sp, hl                         ; 2
+endm</pre>
+        <figcaption>Listing 5: The pop slide technique</figcaption>
+      </figure>
+      <p>
+      Let's go through measuring the cycles again.
+      The cost of a single iteration is 148 cycles (16 * 9 + 1 + 3) for the copy of 32 bytes.
+      There are 256 iterations (8,192 / 32), which makes 37,887 cycles (148 * 256 - 1 for the last <code>jr</code>) for the loop and a grand total of 37,910 cycles when we add the 13 cycles to set the registers before the loop begins, and the 10 cycles to restore the stack pointer to its original value after the loop.
+      BGB reports 1282C (hex), or 75,820 clocks.
+      Dividing the clocks by 2 yields 37,910 cycles, which is yet again exactly what was expected.
+      </p>
+      <p>
+      <strong>Crucial Note:</strong> Because this method overrides the stack pointer, you <strong>must disable interrupts</strong> (using <code>di</code>) during the copy.
+	  If an interrupt occurs, the CPU will attempt to push the program counter onto a stack that no longer points to a valid memory location, leading to crashes or data corruption.
+	  If you aren't already running in a context where interrupts are off (like inside the vblank function), be sure to sandwich the routine between <code>di</code> and <code>ei</code>.
+	  In the sample, interrupts are already disabled when we perform the copy, because the code is run during the initialization of the sample, which is why we don't use <code>di</code> nor <code>ei</code>.
+      </p>
+
+      <hr/>
+
+      <h4>Conclusion</h4>
+      <p>
+      In this article, we studied three methods to copy data on the Game Boy, with a focus on the pop slide.
+      You should now have a good grasp of how to implement the pop slide.
+      You should also understand its benefits and drawbacks, and be able to use it properly in your games.
+      Table 1 lists up the copy methods along their total cycles cost and cycles per byte.
+      </p>
+      <table class="table">
+        <caption>Table 1: Copy Method Performance</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="table-primary">Method</th>
+            <th scope="col" class="table-primary">Total Cycles</th>
+            <th scope="col" class="table-primary">Cycles/Byte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="table-dark">
+            <td>Brute force</td>
+            <td>106,504</td>
+            <td>13.00</td>
+          </tr>
+          <tr class="table-secondary">
+            <td>Optimized</td>
+            <td>50,183</td>
+            <td>6.13</td>
+          </tr>
+          <tr class="table-dark">
+            <td>Pop Slide</td>
+            <td>37,910</td>
+            <td>4.63</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+      The pop slide is an excellent tool for intensive vblank tasks.
+	  While it requires care regarding interrupts, the speed boost is worth the effort.
+	  Note, however, that if you are developing for the <strong>Game Boy Color</strong>, you should use hardware DMA for VRAM transfers, as it achieves an impressive 2 cycles per byte that cannot be match by any other method.
+      </p>
+
+      <hr/>
+
+      <h4>Art Attribution</h4>
+      <p>
+      The image used in the samples is from <a href="https://xcrossbite.itch.io/" target="_blank">xCrossbite</a>.
+      </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  </body>
+</html>

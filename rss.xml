@@ -8,6 +8,13 @@
         <language>en-us</language>
 
         <item>
+            <title>Pop Slide on the Game Boy</title>
+            <guid>https://mdagois.github.io/articles/gameboy_pop_slide.html</guid>
+            <link>https://mdagois.github.io/articles/gameboy_pop_slide.html</link>
+            <description>A technique to copy data fast on the Game Boy.</description>
+            <pubDate>30 Jun 2026 00:00:00 +0000</pubDate>
+        </item>
+        <item>
             <title>Retrospective on Game Boy Coding Adventure</title>
             <guid>https://mdagois.github.io/articles/gameboy_coding_adventure.html</guid>
             <link>https://mdagois.github.io/articles/gameboy_coding_adventure.html</link>
