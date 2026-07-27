@@ -8,6 +8,13 @@
         <language>en-us</language>
 
         <item>
+            <title>Sidescroller with Tile Streaming on the Game Boy</title>
+            <guid>https://mdagois.github.io/articles/gameboy_tile_streaming.html</guid>
+            <link>https://mdagois.github.io/articles/gameboy_tile_streaming.html</link>
+            <description>A practical guide on implementing tile streaming for a horizontal sidescroller on the Game Boy.</description>
+            <pubDate>12 Aug 2026 00:00:00 +0000</pubDate>
+        </item>
+        <item>
             <title>Pop Slide on the Game Boy</title>
             <guid>https://mdagois.github.io/articles/gameboy_pop_slide.html</guid>
             <link>https://mdagois.github.io/articles/gameboy_pop_slide.html</link>
