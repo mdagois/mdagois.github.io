@@ -140,8 +140,10 @@ PrintClockCounter</pre>
       <p>
       We basically sandwich the <code>CopyData</code> function between <code>ResetClockCounter</code> and <code>PrintClockCounter</code>.
       This will display the number of clocks taken by the copy to the debug messages windows each time the sample is run.
-      By the way, the <code>CopyData</code> macro takes three parameters: the address of the data to copy, the destination address, and the data size.
-      This is independent of the copy method.
+      </p>
+      <p>
+      Notice that the <code>CopyData</code> macro takes three parameters: the address of the data to copy, the destination address, and the data size.
+      This is independent of the copy method used to copy the data.
       </p>
 
       <hr/>
@@ -177,7 +179,7 @@ endm</pre>
       <p>
       Registers <code>de</code>, <code>hl</code>, and <code>bc</code> are set to hold the source address, the destination address, and the data size.
       Then, the loop starts.
-      Each iteration fetches one byte from <code>de</code> and copies it to <code>hl</code>.
+      Each iteration fetches one byte from the address in <code>de</code> and copies it to the address in <code>hl</code>.
       The register <code>bc</code> is used as a 16-bit counter to check whether we copied all the bytes.
       </p>
       <p>
@@ -218,7 +220,8 @@ endm</pre>
         <figcaption>Listing 4: Optimized batch copy</figcaption>
       </figure>
       <p>
-      By unrolling the loop to handle 32 bytes at a time, we reduce the overhead caused by conditional jumps (<code>jr</code>) and simplify the loop counter by using an 8-bit register instead of a 16-bit one.
+      By unrolling the loop to handle 32 bytes at a time, we reduce the overhead caused by having a conditional jump (<code>jr</code>) for each byte.
+      We also simplify the loop counter by using an 8-bit register instead of a 16-bit one.
       While this increases the ROM footprint by 90 bytes, the cycle savings are significant.
       </p>
       <p>
@@ -273,7 +276,9 @@ endm</pre>
         <figcaption>Listing 5: The pop slide technique</figcaption>
       </figure>
       <p>
-      By setting the stack pointer <code>sp</code> to the source data and using <code>pop</code> instead of <code>ld</code>, we can retrieve two bytes at a time, significantly speeding up the transfer.
+      By setting the stack pointer <code>sp</code> to the source data and using <code>pop</code> instead of <code>ld</code>, we can retrieve two bytes at a time.
+      Those two bytes are then copied to the destination address using <code>ld [hli], a</code> instructions.
+	  Using the stack significantly speeds up the transfer, because we basically replace two <code>ld a, [de]</code> and two <code>inc de</code> that takes 8 cycles combined with a single <code>pop de</code> that takes only 3 cycles.
       </p>
       <p>
       Let's go through measuring the cycles again.
@@ -299,7 +304,7 @@ endm</pre>
       Table 1 lists up the copy methods along their total cycles cost and cycles per byte.
       </p>
       <table class="table">
-        <caption>Table 1: Copy Method Performance</caption>
+        <caption>Table 1: Copy Methods Performance</caption>
         <thead>
           <tr>
             <th scope="col" class="table-primary">Method</th>
