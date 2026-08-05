@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Coding Adventure [popslide]</title>
+    <title>Coding Adventure [levelstreaming]</title>
     <link rel="stylesheet" href="../bootstrap.min.css">
     <link rel="icon" type="image/png" href="../images/favicon.png" />
     <style>
@@ -61,13 +61,14 @@
       </small></p>
       <p>
       This article shows how to stream a level in a sidescrolling game, a bit like Super Mario Land would do.
-      I will assume you have a good grasp of basic Game Boy programming concept, such as vblank, VRAM, tileset, and tilemaps.
+      I will assume you have a good grasp of basic Game Boy programming concepts, such as vblank, VRAM, tileset, and tilemaps.
       If you need a refresher, please check my book <a href="https://nostarch.com/game-boy-coding-adventure" target="_blank">Game Boy Coding Adventure</a>.
       </p>
       <p>
-      We will start by explaining the graphics data organization we'll use for the streaming system.
-      Then, we see how to compute which data is required in VRAM on any given frame.
-      Finally, we'll see how to copy that data to VRAM, so that the next frame renders correctly.
+      We will start by explaining why we need to stream levels.
+      Next, we'll cover the graphics data organization we'll use for the streaming system.
+      Then, we'll see how to compute which data is required in VRAM on any given frame.
+      Finally, we'll see how and when to copy that data to VRAM, so that the graphics render correctly to the LCD.
       </p>
       <p>
       By the end of the article, you will have a good grasp of the steps required to implement a basic level streaming system on top of which you can add the features required for your game.
@@ -76,8 +77,31 @@
       <hr/>
 
       <h4>Introduction</h4>
+      TODO
+      - Add a video of the streaming, either the sample or Super Mario Land.
+      - Add a picture of the whole tilemap.
+      - Note the limitation of 256x256 size which cause the necessity to stream in the data to vram.
+
+Level streaming in Game Boy games is a strict technical necessity forced by the console's severe hardware limits rather than a modern design choice.
+Because the Game Boy's Picture Processing Unit allocates a fixed background tilemap in VRAM of just 32x32 tiles (256x256 pixels) while the visible screen is 20x18 tiles (160x144 pixels), any level larger than a single static screen physically cannot exist in video memory all at once.
+To create continuous scrolling, developers use the tilemap as a ring buffer, continuously writing new rows or columns of tile indices to the seam just ahead of the camera before it rolls into view.
+Doing this dynamically is further constrained by the strict 1140 cycles VBLANK window per frame, which is the only safe time to update VRAM without corrupting the display, making it impossible to load large chunks of map data at once.
 
       <hr/>
+      TODO
+      - introduction to fixed number.
+      - the budget inside the vblank for copying the 18 indices of a column.
+      - the maximum deplacement of 8 pixel horizontally, and the necessity to copy more indices eventually.
+      - vertical streaming.
+      - the organization in columns as a way to use inc.
+      - the importance of keeping work in vblank short (for sprite work) and prepare during the frame.
+      - naive division and multiplication for "x / 8 * 18" versus optimized version.
+      - compute performance of copying a single column.
+
+      <h4>Conclusion</h4>
+      TODO
+      - Could extend to vertical scrolling streaming as well.
+      - Works even better on CGB with double speed CPU.
 
       <h4>Art Attribution</h4>
       <p>
