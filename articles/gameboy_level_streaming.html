@@ -83,22 +83,21 @@
       Any level larger than a tilemap cannot be stored all at once in VRAM.
       To counter this size limitation and create the smooth sidescrolling of a large level, we must use the tilemap as a ring buffer, continuously writing new columns of level tile indices just before they get displayed to the LCD.
       This technique is called level streaming and many commercial games implement it, including very early games such as Super Mario Land.
-      The effect is shown in Figure 1.
+      The effect is shown in Figure 1, which is a video of the sample we use in this article.
       </p>
-
       <figure>
         <video autoplay loop muted preload="auto">
-          <source src="../video/levelstream/levelstream.mp4" type="video/mp4">
+          <source src="../video/level_streaming/levelstream.mp4" type="video/mp4">
           Your browser does not support the video tag.
         </video>
         <figcaption>Figure 1: Running the streaming sample</figcaption>
       </figure>
-
       <p>
-	  Figure 1 is a video from the sample we use in this article.
-	  The full code of sample is available on <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub</a>.
-	  This article uses snippets of code of the most relevant part of the sample.
-      The sample uses the 1024x144 level shown in Figure 2 as our level.
+	  The level is scrolled right at a pace of 2 pixels per frame first, then scrolled back left at the maximum speed of 8 pixels per frame.
+	  The joypad LEFT and RIGHT button are used to scroll, while the scrolling pace can be controlled by using the joypad UP and DOWN button.
+	  The full code of the sample is available on <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub</a>.
+	  This article uses snippets of code of the most relevant part of the sample only.
+      Figure 2 shows the full 1024x144 level.
       </p>
       <figure>
         <img src="../images/level_streaming/level.png">
@@ -113,16 +112,28 @@
       <h4>Streamed Data Organization</h4>
 
 	  <p>
-      Usually, the indices of a tilemap are exported in what we call row-order, as shown in Figure 3.
+      Usually, the indices of a tilemap are exported in what we call row-order, as shown in Figure 3 for a tilemap of size 20x18.
 	  </p>
-
-<figure 3: row-order diagram>
-
+      <figure>
+        <img src="../images/level_streaming/row_order.png">
+        <figcaption>Figure 3: Exporting a 20x18 tilemap in row order</figcaption>
+      </figure>
       <p>
-	  However, because the sample is going to stream the level one column at a time, we export the indices in column–order instead, as shown in Figure 4.
+	  Rows of 20 tile indices are exported in order to the binary file.
+	  The final binary files contains 18 rows of 20 tile indices.
+	  However, because the sample is going to stream the level one column at a time, we export the indices in column–order instead.
+	  Figure 4 shows the same 20x18 tilemap export column per column.
       </p>
-
-<figure 4: column-order diagram>
+      <figure>
+        <img src="../images/level_streaming/column_order.png">
+        <figcaption>Figure 4: Exporting a 20x18 tilemap in column order</figcaption>
+      </figure>
+      <p>
+	  Columns of 18 tile indices are exported in order to the binary file.
+	  The final binary files contains 20 columns of 18 tile indices.
+	  In the sample, we use a 1024x144 pixels tilemap, or 128x18 tiles.
+	  So, the exported binary file contains 128 columns of 18 tile indices.
+	  </p>
 
       <p>
       While it is possible to use row-order, we’ll see later in this article that it comes at a performance cost during vblank that is not negligible.
@@ -157,7 +168,6 @@ level_idx_end:</pre>
       Remember that these indices are organized in columns of 18 indices.
       The first 18 indices correspond to the first 8x144 strip of Figure 2 from the left, the next 18 indices correspond to the second 8x144 strip, etc.
       </p>
-
       <p>
 	  At all times, there is always be at least 21 columns available in the VRAM, because even though the screen is 20 columns-wide, there could be partial columns displayed on the left and right sides of the screen, briging the visible columns count to 21, i.e. 2 partial columns and 19 full columns in the middle.
       At initialization time, all the tiles are copied to VRAM.
@@ -171,14 +181,25 @@ level_idx_end:</pre>
 
       <h4>Checking Whether Streaming is Required</h4>
 
+	  <p>
+	  Now that all the data is in the ROM, let's move on to the first steps of the streaming system, which is to check whether we need to stream a column or not.
+	  To perform the check, we use two variables, the <i>current scrolling position</i> and the <i>previous scrolling position</i>, as shown in Listing 2.
+	  </p>
       <figure>
         <pre class="asmlisting">
 def WRAM_POSITION_X                 rb 2
-def WRAM_PREVIOUS_POSITION_X        rb 2
-def WRAM_SCROLL_SPEED_X             rb 1</pre>
+def WRAM_PREVIOUS_POSITION_X        rb 2</pre>
         <figcaption>Listing 2: Variables to control the scrolling</figcaption>
       </figure>
-
+	  <p>
+	  The current position, <code>WRAM_POSITION_X</code>, is a 16-bit integer that tracks the scrolling inside the 1024x144 pixel tilemap.
+	  Its value is kept between 0 and 864 (1024 -160) to make sure the system never tries to display a column that does not exist in the ROM.
+	  The previous position, <code>WRAM_PREVIOUS_POSITION_X</code>, is just a copy of the current position of the previous frame.
+	  </p>
+	  <p>
+	  To check whether we need to stream a column, we compare the column of the current position to the column of the previous position.
+	  The corresponding code is shown in Listing 3.
+	  </p>
       <figure>
         <pre class="asmlisting">
 Load16 hl, WRAM_POSITION_X
@@ -190,31 +211,88 @@ ld a, e
 and a, $F8
 cp a, b
 jp z, .stream_column
-	; streaming code
+	; stream a column
 .stream_column</pre>
-        <figcaption>Listing 3: Checking streaming requirement</figcaption>
+        <figcaption>Listing 3: Checking whether a column must be streamed</figcaption>
       </figure>
+	  <p>
+	  To compute the column from a position, we can divide the position by 8.
+	  We could divide both <code>WRAM_POSITION_X</code> and <code>WRAM_PREVIOUS_POSITION_X</code> by 8, then compare their values.
+	  However, we can take a couple of shortcuts here, to save some cycles.
+	  First, we only care about whether the column numbers are equal or not.
+	  The numbers themselves are irrelevant, so we don't need to perform the actual division.
+	  We just need to make sure the comparison works the same as if we had done the division.
+	  Second, the column numbers will only ever be equal or have a difference of -1 or 1.
+	  That is, if the current position column is 10, the previous position column will either be 9, 10, or 11.
+	  So, any difference will be reflected in the low bytes of the 16-bit integers, and the high bytes are irrelevant for the comparison.
+	  Based on these two facts, instead of dividing the 16-bit integers, we can just mask the 3 lower bits of their low bytes (skip the division), and then, we only compare the low bytes (skip using the high byte).
+	  This saves a lot of cycles.
+	  If the column numbers are the same, then we don't need to stream a column.
+	  If the column numbers differ, then we must determine which column must be streamed into which position in VRAM.
+	  </p>
 
 	  <hr/>
 
-	  <h4>Requesting Data Streaming</h4>
+	  <h4>Emitting a Column Streaming Request</h4>
 
+	  <p>
+	  </p>
+<list xxx:stream request left>
+<list xxx:stream request right>
+<list xxx: update rSCX>
+
+	  <hr/>
+
+	  <h4>Handling a Column Streaming Request</h4>
+
+	  <p>
+	  </p>
       <figure>
         <pre class="asmlisting">
 def WRAM_COLUMN_COPY_SOURCE         rb 2
 def WRAM_COLUMN_COPY_DESTINATION    rb 2</pre>
         <figcaption>Listing 4: Stream request variables</figcaption>
       </figure>
+	  <p>
+	  </p>
+      <figure>
+        <pre class="asmlisting">
+; Check if there is any request (source is not $0000)
+Load16 de, WRAM_COLUMN_COPY_SOURCE
+ld a, d
+or a, e
+jr z, .column_request
+	; Copy the requested column
+	Load16 hl, WRAM_COLUMN_COPY_DESTINATION
+	call CopyColumn
+
+	; Clear the request
+	xor a
+	ld [WRAM_COLUMN_COPY_SOURCE + 0], a
+	ld [WRAM_COLUMN_COPY_SOURCE + 1], a
+.column_request</pre>
+        <figcaption>Listing 5: Handling a stream request</figcaption>
+      </figure>
+	  <p>
+	  </p>
+      <figure>
+        <pre class="asmlisting">
+CopyColumn:
+    ld bc, SCRN_VX_B
+    rept SCRN_Y_B
+        ld a, [de]
+        inc de
+        ld [hl], a
+        add hl, bc
+    endr
+    ret</pre>
+        <figcaption>Listing 6: Copying a column to VRAM</figcaption>
+      </figure>
+	  <p>
+	  </p>
 
 	  <hr/>
 
-	  <h4>Copy of a Tilemap Column to VRAM</h4>
-
-<list xxx: copy column>
-<list xxx: handle stream request>
-<list xxx: update rSCX>
-
-      <hr/>
       TODO
       - we update a position based on input and we clamp it to the interval [0~1456]
       - the budget inside the vblank for copying the 18 indices of a column.
@@ -240,11 +318,6 @@ def WRAM_COLUMN_COPY_DESTINATION    rb 2</pre>
 
 
 
-      TODO
-      - Add a video of the streaming, either the sample or Super Mario Land.
-      - Add a picture of the whole tilemap.
-      - Note the limitation of 256x256 size which cause the necessity to stream in the data to vram.
-
 Level streaming in Game Boy games is a strict technical necessity forced by the console's severe hardware limits rather than a modern design choice.
 Because the Game Boy's Picture Processing Unit allocates a fixed background tilemap in VRAM of just 32x32 tiles (256x256 pixels) while the visible screen is 20x18 tiles (160x144 pixels), any level larger than a single static screen physically cannot exist in video memory all at once.
 To create continuous scrolling, developers use the tilemap as a ring buffer, continuously writing new rows or columns of tile indices to the seam just ahead of the camera before it rolls into view.
@@ -259,13 +332,6 @@ Doing this dynamically is further constrained by the strict 1140 cycles VBLANK w
       - the importance of keeping work in vblank short (for sprite work) and prepare during the frame.
       - naive division and multiplication for "x / 8 * 18" versus optimized version.
       - compute performance of copying a single column.
-
-      <hr/>
-
-      <h4>Conclusion</h4>
-      TODO
-      - Could extend to vertical scrolling streaming as well.
-      - Works even better on CGB with double speed CPU.
 
       <hr/>
 
