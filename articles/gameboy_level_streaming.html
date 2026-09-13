@@ -26,7 +26,7 @@
   <body>
     <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
       <div class="container-fluid">
-        <div class="navbar-brand">Coding Adventures</div>
+        <div class="navbar-brand">Coding Adventures [levelstreaming]</div>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -55,9 +55,9 @@
       <img src="../images/gameboy.png" class="rounded mx-auto d-block">
       </p>
 
-      <h3>Sidescroller Level Streaming on the Game Boy</h3>
+      <h3>Level Streaming on the Game Boy</h3>
       <p class="text-end"><small>
-      Published on 2026-08-21
+      Published on 2026-09-20
       </small></p>
       <p>
       This article shows how to stream a level in a sidescrolling game, a bit like Super Mario Land would do.
@@ -68,7 +68,7 @@
       We will start by explaining why we need to stream levels.
       Next, we'll cover the graphics data organization we'll use for the streaming system.
       Then, we'll see how to compute which data is required in VRAM on any given frame.
-      Finally, we'll see how and when to copy that data to VRAM, so that the graphics render correctly to the LCD.
+      Finally, we'll see how and when to copy that data to VRAM, so that the graphics render correctly and timely to the LCD.
       </p>
       <p>
       By the end of the article, you will have a good grasp of the steps required to implement a basic level streaming system on top of which you can add the features required for your game.
@@ -76,7 +76,170 @@
 
       <hr/>
 
-      <h4>Introduction</h4>
+      <h4>The Need for Streaming</h4>
+
+      <p>
+      The Game Boy screen displays 160x144 pixels of a background tilemap that is 256x256 pixels, i.e. 32x32 tiles.
+      Any level larger than a tilemap cannot be stored all at once in VRAM.
+      To counter this size limitation and create the smooth sidescrolling of a large level, we must use the tilemap as a ring buffer, continuously writing new columns of level tile indices just before they get displayed to the LCD.
+      This technique is called level streaming and many commercial games implement it, including very early games such as Super Mario Land.
+      The effect is shown in Figure 1.
+      </p>
+
+      <figure>
+        <video autoplay loop muted preload="auto">
+          <source src="../video/levelstream/levelstream.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        <figcaption>Figure 1: Running the streaming sample</figcaption>
+      </figure>
+
+      <p>
+	  Figure 1 is a video from the sample we use in this article.
+	  The full code of sample is available on <a href="https://github.com/mdagois/mdagois.github.io.samples">GitHub</a>.
+	  This article uses snippets of code of the most relevant part of the sample.
+      The sample uses the 1024x144 level shown in Figure 2 as our level.
+      </p>
+      <figure>
+        <img src="../images/level_streaming/level.png">
+        <figcaption>Figure 2: 1024x144 level</figcaption>
+      </figure>
+      <p>
+      The sample streams that level into the Game Boy VRAM, column by column, to create the same side scrolling effect as in Super Mario Land.
+      </p>
+
+	  <hr/>
+
+      <h4>Streamed Data Organization</h4>
+
+	  <p>
+      Usually, the indices of a tilemap are exported in what we call row-order, as shown in Figure 3.
+	  </p>
+
+<figure 3: row-order diagram>
+
+      <p>
+	  However, because the sample is going to stream the level one column at a time, we export the indices in column–order instead, as shown in Figure 4.
+      </p>
+
+<figure 4: column-order diagram>
+
+      <p>
+      While it is possible to use row-order, we’ll see later in this article that it comes at a performance cost during vblank that is not negligible.
+      To export the data, we use <i>gconv</i>, which is part of <a href="https://github.com/mdagois/gbtools" target="_blank">gbtools</a>, because it already supports exporting tiles in custom orders.
+      You can always use another converter or write your own custom one.
+      The technique explained in this article only assumes that the tilemap data is in column-order.
+      </p>
+      <p>
+      The graphics of Figure 2 are imported in the ROM as shown in Listing 1.
+      </p>
+      <figure>
+        <pre class="asmlisting">
+section "graphics_data", rom0
+
+; Background tileset
+level_chr:
+incbin "level.chr"
+level_chr_end:
+assert level_chr_end - level_chr < 4 * 1024, "Too many tiles in tileset (maximum 256 tiles)"
+
+; Tilemap columns
+level_idx:
+incbin "level.idx"
+level_idx_end:</pre>
+        <figcaption>Listing 1: Adding the level data to the ROM</figcaption>
+      </figure>
+      <p>
+      First, all the tiles are included in the ROM.
+      We make sure we don’t go over 256 tiles here, because the sample is made for the original Game Boy.
+      You could however use up to 512 tiles on Game Boy Color.
+      Then, the indices are included in the ROM.
+      Remember that these indices are organized in columns of 18 indices.
+      The first 18 indices correspond to the first 8x144 strip of Figure 2 from the left, the next 18 indices correspond to the second 8x144 strip, etc.
+      </p>
+
+      <p>
+	  At all times, there is always be at least 21 columns available in the VRAM, because even though the screen is 20 columns-wide, there could be partial columns displayed on the left and right sides of the screen, briging the visible columns count to 21, i.e. 2 partial columns and 19 full columns in the middle.
+      At initialization time, all the tiles are copied to VRAM.
+      Then, the first 21 columns of the tilemap are copied to cover the area visible on the LCD when the sample boots.
+      </p>
+      <p>
+	  Let's move on to actually streaming the data into VRAM as the scroling occurs.
+      </p>
+
+	  <hr/>
+
+      <h4>Checking Whether Streaming is Required</h4>
+
+      <figure>
+        <pre class="asmlisting">
+def WRAM_POSITION_X                 rb 2
+def WRAM_PREVIOUS_POSITION_X        rb 2
+def WRAM_SCROLL_SPEED_X             rb 1</pre>
+        <figcaption>Listing 2: Variables to control the scrolling</figcaption>
+      </figure>
+
+      <figure>
+        <pre class="asmlisting">
+Load16 hl, WRAM_POSITION_X
+Load16 de, WRAM_PREVIOUS_POSITION_X
+ld a, l
+and a, $F8
+ld b, a
+ld a, e
+and a, $F8
+cp a, b
+jp z, .stream_column
+	; streaming code
+.stream_column</pre>
+        <figcaption>Listing 3: Checking streaming requirement</figcaption>
+      </figure>
+
+	  <hr/>
+
+	  <h4>Requesting Data Streaming</h4>
+
+      <figure>
+        <pre class="asmlisting">
+def WRAM_COLUMN_COPY_SOURCE         rb 2
+def WRAM_COLUMN_COPY_DESTINATION    rb 2</pre>
+        <figcaption>Listing 4: Stream request variables</figcaption>
+      </figure>
+
+	  <hr/>
+
+	  <h4>Copy of a Tilemap Column to VRAM</h4>
+
+<list xxx: copy column>
+<list xxx: handle stream request>
+<list xxx: update rSCX>
+
+      <hr/>
+      TODO
+      - we update a position based on input and we clamp it to the interval [0~1456]
+      - the budget inside the vblank for copying the 18 indices of a column.
+      - the maximum displacement of 8 pixel horizontally, and the necessity to copy more indices eventually.
+      - vertical scrolling (reverse hl and de roles).
+      - the organization in columns as a way to use “inc de” and “add hl, de”
+      - the importance of keeping work in vblank short (for sprite work) and preparing during the frame.
+      - naive division and multiplication for "x / 8 * 18" versus optimized version.
+      - compute performance of copying a single column.
+
+	  <h4> Conclusion<h4>
+	  
+	  <p>
+	  In this article, we covered a technique to stream levels in the context of a sidescrolling game.
+	  You should now have a good grasp of how to use a tilemap and horizontal scrolling to create a ring buffer to stream columns of tilemap indices.
+	  </p>
+	  <p>
+	  Using the same technique, you could also implement a vertically scrolling level, such as those used in a shmup, streaming rows of indices instead of columns.
+	  You could even extend the streaming system to handle both horizontal and vertical streaming.
+	  This will consume more time in your vblank, but it is completely realistic to stream both a row and a column inside a single vblank, especially if you use the double speed mode on the Game Boy Color.
+	  </p>
+
+
+
+
       TODO
       - Add a video of the streaming, either the sample or Super Mario Land.
       - Add a picture of the whole tilemap.
@@ -97,14 +260,19 @@ Doing this dynamically is further constrained by the strict 1140 cycles VBLANK w
       - naive division and multiplication for "x / 8 * 18" versus optimized version.
       - compute performance of copying a single column.
 
+      <hr/>
+
       <h4>Conclusion</h4>
       TODO
       - Could extend to vertical scrolling streaming as well.
       - Works even better on CGB with double speed CPU.
 
+      <hr/>
+
       <h4>Art Attribution</h4>
       <p>
-      The image used in the sample is from <a href="https://xxx/" target="_blank">xxx</a>.
+      The background tileset used in the sample is from <a href="https://v3x3d.itch.io/" target="_blank">VEXED</a>.
+	  The font is from <a href="https://offthebooksgames.itch.io/" target="_blank">Off The Books</a>.
       </p>
     </div>
 
