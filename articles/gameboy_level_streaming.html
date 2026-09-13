@@ -237,9 +237,123 @@ jp z, .stream_column
 
 	  <p>
 	  </p>
-<list xxx:stream request left>
-<list xxx:stream request right>
-<list xxx: update rSCX>
+      <figure>
+        <pre class="asmlisting">
+jp z, .stream_column
+    ; Determine if we are streaming left or right
+    ld a, l
+    sub a, e
+    ld l, a
+    ld a, h
+    sbc a, d
+    ld h, a
+    bit 7, h
+    jr z, .stream_request_right
+    .stream_request_left
+		; Stream a column to the left
+	.stream_request_right
+		; Stream a column to the right
+    .stream_request_done
+.stream_column</pre>
+        <figcaption>Listing 4: Determining the streaming direction</figcaption>
+      </figure>
+	  <p>
+	  </p>
+      <figure>
+        <pre class="asmlisting">
+.stream_request_left
+    ; Stream left
+    ; Compute the destination address
+    ; _SCRN0 + low(position_x) / 8
+    ld a, [WRAM_POSITION_X + 0]
+    srl a
+    srl a
+    srl a
+    ld l, a
+    ld h, 0
+    ld de, _SCRN0
+    add hl, de
+    Store16 WRAM_COLUMN_COPY_DESTINATION, hl
+
+    ; Compute the source address
+    ; index_data + position_x / 8 * 18
+    Load16 hl, WRAM_POSITION_X
+    ld d, h
+    ld e, l
+    ; hl = position_x / 8 * 16
+    ld a, l
+    and a, $F8
+    ld l, a
+    add hl, hl
+    ; de = position_x / 8 * 2
+    srl d
+    rr e
+    srl d
+    rr e
+    ld a, e
+    and a, $FE
+    ld e, a
+    ; hl = position_x / 8 * 18
+    add hl, de
+    ; Add base address of index data
+    ld de, level_idx
+    add hl, de
+    Store16 WRAM_COLUMN_COPY_SOURCE, hl</pre>
+        <figcaption>Listing 5: Requesting a column on the left</figcaption>
+      </figure>
+	  <p>
+	  </p>
+      <figure>
+        <pre class="asmlisting">
+.stream_request_right
+    ; Stream right
+    ; Compute the destination address
+    ; _SCRN0 + low(position_x) / 8 + 20 + 1
+    ld a, [WRAM_POSITION_X + 0]
+    srl a
+    srl a
+    srl a
+    add a, SCRN_X_B
+    cp a, SCRN_VX_B
+    jr c, .right_overflow
+        sub a, SCRN_VX_B
+    .right_overflow
+    ld l, a
+    ld h, 0
+    ld de, _SCRN0
+    add hl, de
+    Store16 WRAM_COLUMN_COPY_DESTINATION, hl
+
+    ; Compute the source address
+    ; index_data + (position_x + 160) / 8 * 18
+    Load16 hl, WRAM_POSITION_X
+    ld de, SCRN_X
+    add hl, de
+    ld d, h
+    ld e, l
+    ; hl = (position_x + 160) / 8 * 16
+    ld a, l
+    and a, $F8
+    ld l, a
+    add hl, hl
+    ; de = (position_x + 160) / 8 * 2
+    srl d
+    rr e
+    srl d
+    rr e
+    ld a, e
+    and a, $FE
+    ld e, a
+    ; hl = position_x / 8 * 18
+    add hl, de
+    ; Add base address of index data
+    ld de, level_idx
+    add hl, de
+    Store16 WRAM_COLUMN_COPY_SOURCE, hl</pre>
+        <figcaption>Listing 6: Requesting a column on the right</figcaption>
+      </figure>
+	  <p>
+	  </p>
 
 	  <hr/>
 
@@ -251,7 +365,7 @@ jp z, .stream_column
         <pre class="asmlisting">
 def WRAM_COLUMN_COPY_SOURCE         rb 2
 def WRAM_COLUMN_COPY_DESTINATION    rb 2</pre>
-        <figcaption>Listing 4: Stream request variables</figcaption>
+        <figcaption>Listing 7: Stream request variables</figcaption>
       </figure>
 	  <p>
 	  </p>
@@ -271,7 +385,7 @@ jr z, .column_request
 	ld [WRAM_COLUMN_COPY_SOURCE + 0], a
 	ld [WRAM_COLUMN_COPY_SOURCE + 1], a
 .column_request</pre>
-        <figcaption>Listing 5: Handling a stream request</figcaption>
+        <figcaption>Listing 8: Handling a stream request</figcaption>
       </figure>
 	  <p>
 	  </p>
@@ -286,12 +400,26 @@ CopyColumn:
         add hl, bc
     endr
     ret</pre>
-        <figcaption>Listing 6: Copying a column to VRAM</figcaption>
+        <figcaption>Listing 9: Copying a column to VRAM</figcaption>
+      </figure>
+	  <p>
+	  </p>
+      <figure>
+        <pre class="asmlisting">
+ld a, [WRAM_POSITION_X + 0]
+ld [rSCX], a</pre>
+        <figcaption>Listing 10: Setting <code>rSCX</code></figcaption>
       </figure>
 	  <p>
 	  </p>
 
 	  <hr/>
+
+	  <!--
+Level streaming in Game Boy games is a strict technical necessity forced by the console's severe hardware limits rather than a modern design choice.
+Because the Game Boy's Picture Processing Unit allocates a fixed background tilemap in VRAM of just 32x32 tiles (256x256 pixels) while the visible screen is 20x18 tiles (160x144 pixels), any level larger than a single static screen physically cannot exist in video memory all at once.
+To create continuous scrolling, developers use the tilemap as a ring buffer, continuously writing new rows or columns of tile indices to the seam just ahead of the camera before it rolls into view.
+Doing this dynamically is further constrained by the strict 1140 cycles VBLANK window per frame, which is the only safe time to update VRAM without corrupting the display, making it impossible to load large chunks of map data at once.
 
       TODO
       - we update a position based on input and we clamp it to the interval [0~1456]
@@ -300,10 +428,10 @@ CopyColumn:
       - vertical scrolling (reverse hl and de roles).
       - the organization in columns as a way to use “inc de” and “add hl, de”
       - the importance of keeping work in vblank short (for sprite work) and preparing during the frame.
-      - naive division and multiplication for "x / 8 * 18" versus optimized version.
       - compute performance of copying a single column.
+	  -->
 
-	  <h4> Conclusion<h4>
+	  <h4> Conclusion</h4>
 	  
 	  <p>
 	  In this article, we covered a technique to stream levels in the context of a sidescrolling game.
@@ -314,24 +442,6 @@ CopyColumn:
 	  You could even extend the streaming system to handle both horizontal and vertical streaming.
 	  This will consume more time in your vblank, but it is completely realistic to stream both a row and a column inside a single vblank, especially if you use the double speed mode on the Game Boy Color.
 	  </p>
-
-
-
-
-Level streaming in Game Boy games is a strict technical necessity forced by the console's severe hardware limits rather than a modern design choice.
-Because the Game Boy's Picture Processing Unit allocates a fixed background tilemap in VRAM of just 32x32 tiles (256x256 pixels) while the visible screen is 20x18 tiles (160x144 pixels), any level larger than a single static screen physically cannot exist in video memory all at once.
-To create continuous scrolling, developers use the tilemap as a ring buffer, continuously writing new rows or columns of tile indices to the seam just ahead of the camera before it rolls into view.
-Doing this dynamically is further constrained by the strict 1140 cycles VBLANK window per frame, which is the only safe time to update VRAM without corrupting the display, making it impossible to load large chunks of map data at once.
-
-      <hr/>
-      TODO
-      - the budget inside the vblank for copying the 18 indices of a column.
-      - the maximum deplacement of 8 pixel horizontally, and the necessity to copy more indices eventually.
-      - vertical streaming.
-      - the organization in columns as a way to use inc.
-      - the importance of keeping work in vblank short (for sprite work) and prepare during the frame.
-      - naive division and multiplication for "x / 8 * 18" versus optimized version.
-      - compute performance of copying a single column.
 
       <hr/>
 
